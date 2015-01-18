@@ -172,42 +172,42 @@ func (m *Mux) On(verb string, pattern string, handler HandlerFunc) error {
 		return errors.New(fmt.Sprintf("bear: %s isn't a valid HTTP verb", verb))
 	case "CONNECT":
 		if nil == m.connect {
-			m.connect = &tree{}
+			m.connect = new(tree)
 		}
 		t = m.connect
 	case "DELETE":
 		if nil == m.delete {
-			m.delete = &tree{}
+			m.delete = new(tree)
 		}
 		t = m.delete
 	case "GET":
 		if nil == m.get {
-			m.get = &tree{}
+			m.get = new(tree)
 		}
 		t = m.get
 	case "HEAD":
 		if nil == m.head {
-			m.head = &tree{}
+			m.head = new(tree)
 		}
 		t = m.head
 	case "OPTIONS":
 		if nil == m.options {
-			m.options = &tree{}
+			m.options = new(tree)
 		}
 		t = m.options
 	case "POST":
 		if nil == m.post {
-			m.post = &tree{}
+			m.post = new(tree)
 		}
 		t = m.post
 	case "PUT":
 		if nil == m.put {
-			m.put = &tree{}
+			m.put = new(tree)
 		}
 		t = m.put
 	case "TRACE":
 		if nil == m.trace {
-			m.trace = &tree{}
+			m.trace = new(tree)
 		}
 		t = m.trace
 	}
