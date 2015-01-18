@@ -220,21 +220,21 @@ func (m *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	default:
 		http.NotFound(res, req)
 	case "CONNECT":
-		deploy(m.get, res, req)
+		deploy(m.connect, res, req)
 	case "DELETE":
-		deploy(m.get, res, req)
+		deploy(m.delete, res, req)
 	case "GET":
 		deploy(m.get, res, req)
 	case "HEAD":
-		deploy(m.get, res, req)
+		deploy(m.head, res, req)
 	case "OPTIONS":
-		deploy(m.get, res, req)
+		deploy(m.options, res, req)
 	case "POST":
-		deploy(m.get, res, req)
+		deploy(m.post, res, req)
 	case "PUT":
-		deploy(m.get, res, req)
+		deploy(m.put, res, req)
 	case "TRACE":
-		deploy(m.get, res, req)
+		deploy(m.trace, res, req)
 	}
 }
 
