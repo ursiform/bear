@@ -107,14 +107,6 @@ func sanitize(s string) string {
 	s = strings.Replace(s, slash+slash, slash, -1)
 	return s
 }
-func split(s string) (components []string) {
-	for _, component := range strings.SplitAfter(sanitize(s), "/") {
-		if len(component) > 0 {
-			components = append(components, component)
-		}
-	}
-	return
-}
 func set(verb string, t *tree, pattern string, handler HandlerFunc) error {
 	var (
 		components []string = split(pattern)
@@ -161,6 +153,14 @@ func set(verb string, t *tree, pattern string, handler HandlerFunc) error {
 		current = &(*current)[key].children
 	}
 	return nil
+}
+func split(s string) (components []string) {
+	for _, component := range strings.SplitAfter(sanitize(s), "/") {
+		if len(component) > 0 {
+			components = append(components, component)
+		}
+	}
+	return
 }
 
 // On adds an HTTP verb handler for a URL pattern.
