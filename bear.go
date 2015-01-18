@@ -6,7 +6,6 @@ package bear
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -169,7 +168,7 @@ func (m *Mux) On(verb string, pattern string, handler HandlerFunc) error {
 	var t *tree
 	switch verb {
 	default:
-		return errors.New(fmt.Sprintf("bear: %s isn't a valid HTTP verb", verb))
+		return errors.New("bear: " + verb + " isn't a valid HTTP verb")
 	case "CONNECT":
 		if nil == m.connect {
 			m.connect = new(tree)
