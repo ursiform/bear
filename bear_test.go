@@ -143,18 +143,18 @@ func TestDuplicateFailure(t *testing.T) {
 }
 func TestMiddleware(t *testing.T) {
 	var (
-		mux     *Mux   = New()
-		path    string = "/foo/BAR/baz/QUX"
-		pattern string = "/foo/{bar}/baz/{qux}"
+		middlewares int                    = 3
+		mux         *Mux                   = New()
+		params      map[string]string      = map[string]string{"bar": "BAR", "qux": "QUX"}
+		path        string                 = "/foo/BAR/baz/QUX"
+		pattern     string                 = "/foo/{bar}/baz/{qux}"
+		state       map[string]interface{} = map[string]interface{}{"one": 1, "two": 2}
 	)
 	run := func(method string) {
 		var (
-			middlewares int               = 3
-			params      map[string]string = map[string]string{"bar": "BAR", "qux": "QUX"}
-			req         *http.Request
-			res         *httptest.ResponseRecorder
-			state       map[string]interface{} = map[string]interface{}{"one": 1, "two": 2}
-			visited     int                    = 0
+			req     *http.Request
+			res     *httptest.ResponseRecorder
+			visited int = 0
 		)
 		one := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++
@@ -180,7 +180,7 @@ func TestMiddleware(t *testing.T) {
 		mux.On(method, pattern, one, two, last)
 		mux.ServeHTTP(res, req)
 		if visited != middlewares {
-			t.Errorf("%s %s (%s) expected %d middlewares but only saw %d", method, path, pattern, middlewares, visited)
+			t.Errorf("%s %s (%s) expected %d middlewares, visited %d", method, path, pattern, middlewares, visited)
 		}
 	}
 	for _, verb := range verbs {
