@@ -121,3 +121,6 @@ returns an error if it fails, but does not panic.
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request)
 ```
 ServeHTTP allows a Mux instance to conform to http.Handler interface.
+
+## License
+[MIT License](LICENSE)
