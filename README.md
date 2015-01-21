@@ -1,4 +1,4 @@
-# *b*ear: *e*mbeddedable *a*pplication *r*outer
+# *b*ear: *e*mbeddable *a*pplication *r*outer
 This is experimental software for now. The API might change.
 
 `bear` is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
