@@ -3,7 +3,7 @@
 // that can be found in the LICENSE file.
 
 /*
-	Package bear (bear embeddedable application router) is an HTTP multiplexer.
+	Package bear (bear embeddable application router) is an HTTP multiplexer.
 	It uses a tree structure for fast routing, supports dynamic parameters,
 	middleware, and accepts both native http.HandlerFunc or bear.HandlerFunc
 	(which accepts an extra Context argument that allows storing State and
