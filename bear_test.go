@@ -245,6 +245,29 @@ func TestOKRoot(t *testing.T) {
 		simpleBearAnonTest("anonymous http.HandlerFunc", verb, path, pattern, want)(t)
 	}
 }
+func TestNotFoundCustom(t *testing.T) {
+	var (
+		method  string = "GET"
+		mux     *Mux   = New()
+		path    string = "/foo/bar"
+		pattern string = "/foo"
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+		want    int = http.StatusTeapot
+	)
+	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		res.WriteHeader(http.StatusTeapot)
+		res.Write([]byte("not found, teapot style"))
+	})
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.On(method, pattern, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	mux.NotFoundHandler(handler)
+	mux.ServeHTTP(res, req)
+	if res.Code != want {
+		t.Errorf("%s %s (%s) got %d want %d", method, path, pattern, res.Code, want)
+	}
+}
 func TestNotFoundNoParams(t *testing.T) {
 	var (
 		path    string = "/foo/bar"

@@ -39,14 +39,15 @@ type Context struct {
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
 
 type Mux struct {
-	connect *tree
-	delete  *tree
-	get     *tree
-	head    *tree
-	options *tree
-	post    *tree
-	put     *tree
-	trace   *tree
+	connect         *tree
+	delete          *tree
+	get             *tree
+	head            *tree
+	options         *tree
+	post            *tree
+	put             *tree
+	trace           *tree
+	notfoundhandler http.HandlerFunc
 }
 
 type tree struct {
@@ -58,18 +59,6 @@ type tree struct {
 }
 type treemap map[string]*tree
 
-func deploy(tr *tree, res http.ResponseWriter, req *http.Request) {
-	if nil == tr {
-		http.NotFound(res, req)
-	} else {
-		location, context := find(tr, req.URL.Path)
-		if nil == location || nil == location.handlers {
-			http.NotFound(res, req)
-		} else {
-			location.handlers[0](res, req, context)
-		}
-	}
-}
 func find(tr *tree, path string) (*tree, *Context) {
 	var (
 		components []string = split(path)
@@ -235,11 +224,38 @@ func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (mux *Mux) deploy(tr *tree, res http.ResponseWriter, req *http.Request) {
+	if nil == tr {
+		mux.notfound(res, req)
+	} else {
+		location, context := find(tr, req.URL.Path)
+		if nil == location || nil == location.handlers {
+			mux.notfound(res, req)
+		} else {
+			location.handlers[0](res, req, context)
+		}
+	}
+}
+
+func (mux *Mux) notfound(res http.ResponseWriter, req *http.Request) {
+	if nil == mux.notfoundhandler {
+		http.NotFound(res, req)
+	} else {
+		mux.notfoundhandler(res, req)
+	}
+}
+
+// NotFoundHandler allows for replacing the http.NotFound handler that is fired
+// when no matching route pattern is found. It may be updated in the future to
+// accept both http.HandlerFunc and bear.HandlerFunc, but it will be
+// backward-compatible.
+func (mux *Mux) NotFoundHandler(handler http.HandlerFunc) { mux.notfoundhandler = handler }
+
 // On adds HTTP verb handler(s) for a URL pattern.
 // The handler argument(s) should either be http.HandlerFunc or bear.HandlerFunc
 // or conform to the signature of one of those two.
 // NOTE: if http.HandlerFunc (or a function conforming to its signature) is used
-// no other handlers can FOLLOW it, i.e. it is not middleware
+// no other handlers can *follow* it, i.e. it is not middleware.
 // It returns an error if it fails, but does not panic.
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 	var tr *tree
@@ -270,31 +286,29 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 	}
 }
 
-// ServeHTTP allows a Mux instance to conform to http.Handler interface.
+// ServeHTTP allows a Mux instance to conform to the http.Handler interface.
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	switch req.Method {
 	default:
-		http.NotFound(res, req)
+		mux.notfound(res, req)
 	case "CONNECT":
-		deploy(mux.connect, res, req)
+		mux.deploy(mux.connect, res, req)
 	case "DELETE":
-		deploy(mux.delete, res, req)
+		mux.deploy(mux.delete, res, req)
 	case "GET":
-		deploy(mux.get, res, req)
+		mux.deploy(mux.get, res, req)
 	case "HEAD":
-		deploy(mux.head, res, req)
+		mux.deploy(mux.head, res, req)
 	case "OPTIONS":
-		deploy(mux.options, res, req)
+		mux.deploy(mux.options, res, req)
 	case "POST":
-		deploy(mux.post, res, req)
+		mux.deploy(mux.post, res, req)
 	case "PUT":
-		deploy(mux.put, res, req)
+		mux.deploy(mux.put, res, req)
 	case "TRACE":
-		deploy(mux.trace, res, req)
+		mux.deploy(mux.trace, res, req)
 	}
 }
 
 // New returns a reference to a bear Mux multiplexer
-func New() *Mux {
-	return new(Mux)
-}
+func New() *Mux { return new(Mux) }

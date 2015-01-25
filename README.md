@@ -104,6 +104,16 @@ func New() *Mux
 ```
 New returns a reference to a bear Mux multiplexer
 
+#### func (*Mux) NotFoundHandler
+
+```go
+func (mux *Mux) NotFoundHandler(handler http.HandlerFunc)
+```
+NotFoundHandler allows for replacing the http.NotFound handler that is fired
+when no matching route pattern is found. It may be updated in the future to
+accept both http.Handler and bear.Handler funcs, but it will be
+backward-compatible.
+
 #### func (*Mux) On
 
 ```go
