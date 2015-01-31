@@ -1,5 +1,5 @@
 # *b*ear: *e*mbeddable *a*pplication *r*outer
-This is experimental software for now, but the API probably will not change in backward-incompatible ways.
+This is experimental software, but the API probably will not change in backward-incompatible ways.
 
 `bear.Mux` is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
 and accepts both native `http.HandlerFunc` or `bear.HandlerFunc` (which accepts an extra `*Context` argument that allows
