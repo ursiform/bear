@@ -105,7 +105,7 @@ type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
 ```
 
 HandlerFunc is similar to `http.HandlerFunc`, except it requires an extra
-argument for the `Context` of a request
+argument for the `*Context` of a request
 
 #### type Mux
 
@@ -146,8 +146,7 @@ There are three kinds of tokens:
 2. dynamically populated parameters `"/foo/{bar}/baz"` (where `"bar"` will be populated in the `*Context.Params`)
 3. wildcard tokens `"/foo/bar/*"` where `*` has to be the final token.
 
-Parsed URL params are available in handlers via the `Params` map of the
-`Context`.
+Parsed URL params are available in handlers via the `Params` map of the `*Context`.
 
 *Notes:*
 
