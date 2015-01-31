@@ -3,7 +3,12 @@ This is experimental software for now. The API might change.
 
 `bear.Mux` is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
 and accepts both native `http.HandlerFunc` or `bear.HandlerFunc` (which accepts an extra `*Context` argument that allows
-storing state and calling the next middleware)
+storing `State` and calling the `Next` middleware)
+
+## Install
+```
+go get github.com/ursiform/bear
+```
 
 ## Quick start
 ```go
@@ -15,6 +20,11 @@ import (
     "net/http"
 )
 
+func notfound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
+    res.Header().Set("Content-Type", "text/plain")
+    res.WriteHeader(http.StatusNotFound)
+    res.Write([]byte("Sorry, not found!\n"))
+}
 func one(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     ctx.State["one"] = "set in func one"
     ctx.Next(res, req)
@@ -36,13 +46,16 @@ func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 func main() {
     mux := bear.New()
     port := ":1337"
-    err := mux.On("GET", "/hello/{user}", one, two, three)
-    if err != nil {
-        fmt.Println(err)
-    } else {
-        fmt.Printf("running on %s\n", port)
-        http.ListenAndServe(port, mux)
+    // custom URL params are wrapped in {}
+    if err := mux.On("GET", "/hello/{user}", one, two, three); err != nil {
+        panic(err)
     }
+    // wildcard URL tokens can be used to handle 404s, among other things
+    if err := mux.On("*", "/*", notfound); err != nil {
+        panic(err)
+    }
+    fmt.Printf("running on %s\n", port)
+    http.ListenAndServe(port, mux)
 }
 ```
 ###To see it working:
@@ -51,6 +64,8 @@ $ curl http://localhost:1337/hello/world
 Hello, world!
 state one: set in func one
 state two: set in func two
+$ curl http://localhost:1337/hello/world/foo
+Sorry, not found!
 ```
 
 ## Test
@@ -63,7 +78,8 @@ state two: set in func two
 ```go
 type Context struct {
     // Params is a map of string keys with string values that is populated
-    // by the dynamic URL parameters (if any)
+    // by the dynamic URL parameters (if any).
+    // Wildcard params are accessed by using an asterisk: Params["*"]
     Params map[string]string
     // Pattern is the URL pattern string that was matched by a given request
     Pattern string
@@ -72,6 +88,7 @@ type Context struct {
     State map[string]interface{}
 }
 ```
+
 
 #### func (*Context) Next
 
@@ -87,8 +104,8 @@ particular request pattern.
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
 ```
 
-HandlerFunc is similar to net/http HandlerFunc, except it requires an extra
-argument for the Context of a request
+HandlerFunc is similar to `http.HandlerFunc`, except it requires an extra
+argument for the `Context` of a request
 
 #### type Mux
 
@@ -97,22 +114,13 @@ type Mux struct {
 }
 ```
 
-#### func  New
+
+#### func New
 
 ```go
 func New() *Mux
 ```
-New returns a reference to a bear Mux multiplexer
-
-#### func (*Mux) NotFoundHandler
-
-```go
-func (mux *Mux) NotFoundHandler(handler http.HandlerFunc)
-```
-NotFoundHandler allows for replacing the http.NotFound handler that is fired
-when no matching route pattern is found. It may be updated in the future to
-accept both http.Handler and bear.Handler funcs, but it will be
-backward-compatible.
+New returns a reference to a bear `Mux` multiplexer
 
 #### func (*Mux) On
 
@@ -120,17 +128,36 @@ backward-compatible.
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error
 ```
 On adds HTTP verb handler(s) for a URL pattern. The handler argument(s) should
-either be http.HandlerFunc or bear.HandlerFunc or conform to the signature of
-one of those two. NOTE: if http.HandlerFunc (or a function conforming to its
-signature) is used no other handlers can FOLLOW it, i.e. it is not middleware It
-returns an error if it fails, but does not panic.
+either be `http.HandlerFunc` or `bear.HandlerFunc` or conform to the signature
+of one of those two. NOTE: if `http.HandlerFunc` (or a function conforming to
+its signature) is used no other handlers can *follow* it, i.e. it is not
+middleware.
+
+It returns an error if it fails, but does not panic. Verb strings are UPPERCASE
+HTTP methods. There is a special verb `"*"` which can be used to answer *all*
+HTTP methods.
+
+Pattern strings are composed of tokens that are separated by `"/"`
+characters.
+
+There are three kinds of tokens: static path strings
+`"/foo/bar/baz/etc"`, dynamically populated parameters `"/foo/{bar}/baz"` (where
+`"bar"` will be populated in the context params), and wildcard tokens
+`"/foo/bar/*"` where `*` has to be the final token.
+
+Parsed URL params are available in handlers via the `Params` map of the
+`Context`.
+
+Notes: A trailing slash `"/"` is always implied, even when not explicit.
+Wildcard (`"*"`) patterns are only matched if no other (more specific) pattern
+matches. If multiple wildcard rules match, the most specific takes precedence.
 
 #### func (*Mux) ServeHTTP
 
 ```go
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request)
 ```
-ServeHTTP allows a Mux instance to conform to http.Handler interface.
+ServeHTTP allows a `Mux` instance to conform to the `http.Handler` interface.
 
 ## License
 [MIT License](LICENSE)

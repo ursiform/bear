@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-var verbs []string = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
-
 type tester func(*testing.T)
 
 // generates tests for param requests using bear.HandlerFunc
@@ -247,25 +245,40 @@ func TestOKRoot(t *testing.T) {
 }
 func TestNotFoundCustom(t *testing.T) {
 	var (
-		method  string = "GET"
-		mux     *Mux   = New()
-		path    string = "/foo/bar"
-		pattern string = "/foo"
-		req     *http.Request
-		res     *httptest.ResponseRecorder
-		want    int = http.StatusTeapot
+		method       string = "GET"
+		mux          *Mux   = New()
+		pathFound    string = "/foo/bar"
+		pathLost     string = "/foo/bar/baz"
+		patternFound string = "/foo/bar"
+		patternLost  string = "/*"
+		req          *http.Request
+		res          *httptest.ResponseRecorder
+		wantFound    int = http.StatusOK
+		wantLost     int = http.StatusTeapot
 	)
-	handler := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		res.WriteHeader(http.StatusTeapot)
-		res.Write([]byte("not found, teapot style"))
+	handlerFound := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte("found!"))
 	})
-	req, _ = http.NewRequest(method, path, nil)
+	handlerLost := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		res.WriteHeader(http.StatusTeapot)
+		res.Write([]byte("not found!"))
+	})
+	// test found to make sure wildcard doesn't overtake everything
+	req, _ = http.NewRequest(method, pathFound, nil)
 	res = httptest.NewRecorder()
-	mux.On(method, pattern, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	mux.NotFoundHandler(handler)
+	mux.On(method, patternFound, handlerFound)
 	mux.ServeHTTP(res, req)
-	if res.Code != want {
-		t.Errorf("%s %s (%s) got %d want %d", method, path, pattern, res.Code, want)
+	if res.Code != wantFound {
+		t.Errorf("%s %s (%s) got %d want %d", method, pathFound, patternFound, res.Code, wantFound)
+	}
+	// test lost to make sure wildcard can gets non-pattern-matching paths
+	req, _ = http.NewRequest(method, pathLost, nil)
+	res = httptest.NewRecorder()
+	mux.On(method, patternLost, handlerLost)
+	mux.ServeHTTP(res, req)
+	if res.Code != wantLost {
+		t.Errorf("%s %s (%s) got %d want %d", method, pathLost, patternLost, res.Code, wantLost)
 	}
 }
 func TestNotFoundNoParams(t *testing.T) {
@@ -292,5 +305,69 @@ func TestNotFoundParams(t *testing.T) {
 		simpleHttpAnonTest("anonymous http.HandlerFunc", verb, path, pattern, want)(t)
 		simpleBearTest("bear.HandlerFunc", verb, path, pattern, want)(t)
 		simpleBearAnonTest("anonymous http.HandlerFunc", verb, path, pattern, want)(t)
+	}
+}
+func TestWildcardCompeting(t *testing.T) {
+	var (
+		method       string = "GET"
+		mux          *Mux   = New()
+		patternOne   string = "/*"
+		pathOne      string = "/bar/baz"
+		wantOne      string = "bar/baz"
+		patternTwo   string = "/foo/*"
+		pathTwo      string = "/foo/baz"
+		wantTwo      string = "baz"
+		patternThree string = "/foo/bar/*"
+		pathThree    string = "/foo/bar/bar/baz"
+		wantThree    string = "bar/baz"
+		req          *http.Request
+		res          *httptest.ResponseRecorder
+	)
+	handler := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte(ctx.Params["*"]))
+	}
+	mux.On(method, patternOne, handler)
+	mux.On(method, patternTwo, handler)
+	mux.On(method, patternThree, handler)
+	req, _ = http.NewRequest(method, pathOne, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != wantOne {
+		t.Errorf("%s %s (%s) got %s want %s", method, pathOne, patternOne, body, wantOne)
+	}
+	req, _ = http.NewRequest(method, pathTwo, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != wantTwo {
+		t.Errorf("%s %s (%s) got %s want %s", method, pathTwo, patternTwo, body, wantTwo)
+	}
+	req, _ = http.NewRequest(method, pathThree, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != wantThree {
+		t.Errorf("%s %s (%s) got %s want %s", method, pathThree, patternThree, body, wantThree)
+	}
+}
+func TestWildcardParams(t *testing.T) {
+	var (
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "/foo/{bar}/*"
+		path    string = "/foo/ABC/baz"
+		want    string = "ABC"
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+	)
+	handler := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte(ctx.Params["bar"]))
+	}
+	mux.On(method, pattern, handler)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != want {
+		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
 	}
 }
