@@ -133,24 +133,32 @@ of one of those two. NOTE: if `http.HandlerFunc` (or a function conforming to
 its signature) is used no other handlers can *follow* it, i.e. it is not
 middleware.
 
-It returns an error if it fails, but does not panic. Verb strings are UPPERCASE
+It returns an error if it fails, but does not panic. Verb strings are uppercase
 HTTP methods. There is a special verb `"*"` which can be used to answer *all*
 HTTP methods.
 
 Pattern strings are composed of tokens that are separated by `"/"`
 characters.
 
-There are three kinds of tokens: static path strings
-`"/foo/bar/baz/etc"`, dynamically populated parameters `"/foo/{bar}/baz"` (where
-`"bar"` will be populated in the context params), and wildcard tokens
-`"/foo/bar/*"` where `*` has to be the final token.
+There are three kinds of tokens:
+
+1. static path strings: `"/foo/bar/baz/etc"`
+2. dynamically populated parameters `"/foo/{bar}/baz"` (where `"bar"` will be populated in the `*Context.Params`)
+3. wildcard tokens `"/foo/bar/*"` where `*` has to be the final token.
 
 Parsed URL params are available in handlers via the `Params` map of the
 `Context`.
 
-Notes: A trailing slash `"/"` is always implied, even when not explicit.
-Wildcard (`"*"`) patterns are only matched if no other (more specific) pattern
-matches. If multiple wildcard rules match, the most specific takes precedence.
+*Notes:*
+
+* A trailing slash `/` is always implied, even when not explicit.
+* Wildcard (`*`) patterns are only matched if no other (more specific)
+pattern matches. If multiple wildcard rules match, the most specific takes
+precedence.
+* Wildcard patterns do *not* match empty strings: a request to `/foo/bar` will
+not match the pattern `"/foo/bar/*"`. The only exception to this is the root
+wildcard pattern `"/*"` which will match the request path `/` if no root
+handler exists.
 
 #### func (*Mux) ServeHTTP
 
