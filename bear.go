@@ -205,20 +205,16 @@ func initialize(tr **tree) *tree {
 	return *tr
 }
 func sanitize(s string) string {
-	// be nice about empty strings
 	if s == "" {
-		return slash
+		return slash // handle empty strings
 	}
-	// always prefix paths from root
 	if !strings.HasPrefix(s, slash) {
-		s = slash + s
+		s = slash + s // prefix paths from root
 	}
-	// always end with slash
 	if !strings.HasSuffix(s, slash) {
-		s = s + slash
+		s = s + slash // end with slash
 	}
-	// replace double slashes
-	s = strings.Replace(s, slash+slash, slash, -1)
+	s = strings.Replace(s, slash+slash, slash, -1) // replace double slashes
 	return s
 }
 func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
