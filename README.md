@@ -87,7 +87,7 @@ type Context struct {
 ```go
 func (ctx *Context) Next(res http.ResponseWriter, req *http.Request)
 ```
-Next calls the next middleware (if any) that was registered as a handler for a
+`Next` calls the next middleware (if any) that was registered as a handler for a
 particular request pattern.
 
 #### type HandlerFunc
@@ -96,7 +96,7 @@ particular request pattern.
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
 ```
 
-HandlerFunc is similar to `http.HandlerFunc`, except it requires an extra
+`HandlerFunc` is similar to `http.HandlerFunc`, except it requires an extra
 argument for the `*Context` of a request
 
 #### type Mux
@@ -112,14 +112,14 @@ type Mux struct {
 ```go
 func New() *Mux
 ```
-New returns a reference to a bear `Mux` multiplexer
+`New` returns a reference to a bear `Mux` multiplexer
 
 #### func (*Mux) On
 
 ```go
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error
 ```
-On adds HTTP verb handler(s) for a URL pattern. The handler argument(s) should
+`On` adds HTTP verb handler(s) for a URL pattern. The handler argument(s) should
 either be `http.HandlerFunc` or `bear.HandlerFunc` or conform to the signature
 of one of those two. NOTE: if `http.HandlerFunc` (or a function conforming to
 its signature) is used no other handlers can *follow* it, i.e. it is not
@@ -156,7 +156,7 @@ handler exists.
 ```go
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request)
 ```
-ServeHTTP allows a `Mux` instance to conform to the `http.Handler` interface.
+`ServeHTTP` allows a `Mux` instance to conform to the `http.Handler` interface.
 
 ## License
 [MIT License](LICENSE)

@@ -349,6 +349,18 @@ func TestWildcardCompeting(t *testing.T) {
 		t.Errorf("%s %s (%s) got %s want %s", method, pathThree, patternThree, body, wantThree)
 	}
 }
+func TestWildcardNotLast(t *testing.T) {
+	var (
+		mux     *Mux   = New()
+		pattern string = "/foo/*/bar"
+	)
+	handler := func(res http.ResponseWriter, req *http.Request) {}
+	err := mux.On("*", pattern, handler)
+	if err == nil {
+		t.Errorf("wildcard pattern (%s) with non-final wildcard token was accepted", pattern)
+	}
+}
+
 func TestWildcardParams(t *testing.T) {
 	var (
 		method  string = "GET"
