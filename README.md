@@ -45,17 +45,9 @@ func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 }
 func main() {
     mux := bear.New()
-    port := ":1337"
-    // custom URL params are wrapped in {}
-    if err := mux.On("GET", "/hello/{user}", one, two, three); err != nil {
-        panic(err)
-    }
-    // wildcard URL tokens can be used to handle 404s, among other things
-    if err := mux.On("*", "/*", notfound); err != nil {
-        panic(err)
-    }
-    fmt.Printf("running on %s\n", port)
-    http.ListenAndServe(port, mux)
+    mux.On("GET", "/hello/{user}", one, two, three) // custom URL param {user}
+    mux.On("*", "/*", notfound)                     // wildcard to handle 404s
+    http.ListenAndServe(":1337", mux)
 }
 ```
 ###To see it working:
