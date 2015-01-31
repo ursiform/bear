@@ -178,21 +178,19 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb, pattern)
 				return
 			}
-			unreachable = true // after the first non bear.HandlerFunc handler, all other handlers will be unreachable
+			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
 			listener := fn.(http.HandlerFunc)
-			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, ctx *Context) {
-				listener(res, req)
-			}))
+			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) { listener(res, req) }
+			handlers = append(handlers, HandlerFunc(wrapper))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
 				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb, pattern)
 				return
 			}
-			unreachable = true // after the first non bear.HandlerFunc handler, all other handlers will be unreachable
+			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
 			listener := http.HandlerFunc(fn.(func(http.ResponseWriter, *http.Request)))
-			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, ctx *Context) {
-				listener(res, req)
-			}))
+			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) { listener(res, req) }
+			handlers = append(handlers, HandlerFunc(wrapper))
 		default:
 			err = fmt.Errorf("bear: handler needs to match http.HandlerFunc OR bear.HandlerFunc")
 			return
