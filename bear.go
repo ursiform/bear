@@ -268,7 +268,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	return nil
 }
 func split(s string) (components []string) {
-	for _, component := range strings.SplitAfter(sanitize(s), "/") {
+	for _, component := range strings.SplitAfter(sanitize(s), slash) {
 		if len(component) > 0 {
 			components = append(components, component)
 		}
