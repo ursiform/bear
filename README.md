@@ -73,8 +73,6 @@ type Context struct {
     // by the dynamic URL parameters (if any).
     // Wildcard params are accessed by using an asterisk: Params["*"]
     Params map[string]string
-    // Pattern is the URL pattern string that was matched by a given request
-    Pattern string
     // State is a utility map of string keys and empty interface values
     // to allow one middleware to pass information to the next.
     State map[string]interface{}
@@ -89,6 +87,13 @@ func (ctx *Context) Next(res http.ResponseWriter, req *http.Request)
 ```
 `Next` calls the next middleware (if any) that was registered as a handler for a
 particular request pattern.
+
+#### func (*Context) Pattern
+
+```go
+func (ctx *Context) Pattern() string
+```
+Pattern returns the URL pattern that a request matched.
 
 #### type HandlerFunc
 

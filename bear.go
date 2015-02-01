@@ -34,12 +34,10 @@ type Context struct {
 	// by the dynamic URL parameters (if any).
 	// Wildcard params are accessed by using an asterisk: Params["*"]
 	Params map[string]string
-	// Pattern is the URL pattern string that was matched by a given request
-	Pattern string
 	// State is a utility map of string keys and empty interface values
 	// to allow one middleware to pass information to the next.
 	State   map[string]interface{}
-	handler int
+	handler uint8
 	tree    *tree
 }
 
@@ -59,13 +57,11 @@ type Mux struct {
 }
 
 type tree struct {
-	children treemap
-	dynamic  bool
+	children map[string]*tree
 	handlers []HandlerFunc
 	name     string
 	pattern  string
 }
-type treemap map[string]*tree
 
 func deploy(tr *tree, res http.ResponseWriter, req *http.Request) {
 	if nil == tr {
@@ -81,21 +77,22 @@ func deploy(tr *tree, res http.ResponseWriter, req *http.Request) {
 }
 func find(tr *tree, path string) (*tree, *Context) {
 	var (
-		components []string = split(path)
-		current    *treemap = &tr.children
-		context    *Context = &Context{Params: make(map[string]string), State: make(map[string]interface{}), tree: tr}
-		last       int      = len(components) - 1
-		wild       *tree    = new(tree)
+		components []string          = split(path)
+		current    *map[string]*tree = &tr.children
+		context    *Context          = &Context{
+			Params: make(map[string]string),
+			State:  make(map[string]interface{}),
+			tree:   tr}
+		last int   = len(components) - 1
+		wild *tree = &tree{}
 	)
 	if nil != *current && nil != (*current)[wildcard] {
 		wild = (*current)[wildcard]
 	}
 	if 0 == last { // i.e. location is /
 		if nil != tr.handlers {
-			context.Pattern = tr.pattern
 			return tr, context
 		} else if nil != wild {
-			context.Pattern = wild.pattern
 			return wild, context
 		} else {
 			return nil, context
@@ -109,7 +106,6 @@ func find(tr *tree, path string) (*tree, *Context) {
 				return nil, context
 			} else {
 				context.tree = wild
-				context.Pattern = context.tree.pattern
 				return context.tree, context
 			}
 		}
@@ -119,7 +115,6 @@ func find(tr *tree, path string) (*tree, *Context) {
 					return nil, context
 				} else {
 					context.tree = wild
-					context.Pattern = context.tree.pattern
 					return context.tree, context
 				}
 			} else {
@@ -144,7 +139,6 @@ func find(tr *tree, path string) (*tree, *Context) {
 			} else {
 				context.tree = (*current)[key]
 			}
-			context.Pattern = context.tree.pattern
 			return context.tree, context
 		} else {
 			current = &(*current)[key].children
@@ -179,8 +173,9 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
-			listener := fn.(http.HandlerFunc)
-			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) { listener(res, req) }
+			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+				fn.(http.HandlerFunc)(res, req)
+			}
 			handlers = append(handlers, HandlerFunc(wrapper))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
@@ -188,8 +183,9 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
-			listener := http.HandlerFunc(fn.(func(http.ResponseWriter, *http.Request)))
-			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) { listener(res, req) }
+			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+				http.HandlerFunc(fn.(func(http.ResponseWriter, *http.Request)))(res, req)
+			}
 			handlers = append(handlers, HandlerFunc(wrapper))
 		default:
 			err = fmt.Errorf("bear: handler needs to match http.HandlerFunc OR bear.HandlerFunc")
@@ -197,12 +193,6 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 		}
 	}
 	return
-}
-func initialize(tr **tree) *tree {
-	if nil == *tr {
-		*tr = new(tree)
-	}
-	return *tr
 }
 func sanitize(s string) string {
 	if s == "" {
@@ -219,9 +209,9 @@ func sanitize(s string) string {
 }
 func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	var (
-		components []string = split(pattern)
-		current    *treemap = &tr.children
-		last       int      = len(components) - 1
+		components []string          = split(pattern)
+		current    *map[string]*tree = &tr.children
+		last       int               = len(components) - 1
 	)
 	if 0 == last {
 		if nil != tr.handlers {
@@ -233,7 +223,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 		}
 	}
 	if nil == tr.children {
-		tr.children = make(treemap)
+		tr.children = make(map[string]*tree)
 	}
 	dyn := regexp.MustCompile(word)
 	components, last = components[1:], last-1 // ignore the initial "/" component
@@ -251,7 +241,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 			name = asterisk
 		}
 		if nil == (*current)[key] {
-			(*current)[key] = &tree{children: make(treemap), name: name}
+			(*current)[key] = &tree{children: make(map[string]*tree), name: name}
 		}
 		if index == last {
 			if nil != (*current)[key].handlers {
@@ -280,10 +270,13 @@ func split(s string) (components []string) {
 // a particular request pattern.
 func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
 	ctx.handler++
-	if len(ctx.tree.handlers) > ctx.handler {
+	if uint8(len(ctx.tree.handlers)) > ctx.handler {
 		ctx.tree.handlers[ctx.handler](res, req, ctx)
 	}
 }
+
+// Pattern returns the URL pattern that a request matched.
+func (ctx *Context) Pattern() string { return ctx.tree.pattern }
 
 /*
 On adds HTTP verb handler(s) for a URL pattern. The handler argument(s)
@@ -334,21 +327,21 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 		}
 		return nil
 	case "CONNECT":
-		tr = initialize(&mux.connect)
+		tr = mux.connect
 	case "DELETE":
-		tr = initialize(&mux.delete)
+		tr = mux.delete
 	case "GET":
-		tr = initialize(&mux.get)
+		tr = mux.get
 	case "HEAD":
-		tr = initialize(&mux.head)
+		tr = mux.head
 	case "OPTIONS":
-		tr = initialize(&mux.options)
+		tr = mux.options
 	case "POST":
-		tr = initialize(&mux.post)
+		tr = mux.post
 	case "PUT":
-		tr = initialize(&mux.put)
+		tr = mux.put
 	case "TRACE":
-		tr = initialize(&mux.trace)
+		tr = mux.trace
 	}
 	if fns, err := handlerize(verb, pattern, handlers); err != nil {
 		return err
@@ -382,4 +375,14 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 // New returns a pointer to a bear Mux multiplexer
-func New() *Mux { return new(Mux) }
+func New() *Mux {
+	return &Mux{
+		connect: &tree{},
+		delete:  &tree{},
+		get:     &tree{},
+		head:    &tree{},
+		options: &tree{},
+		post:    &tree{},
+		put:     &tree{},
+		trace:   &tree{}}
+}
