@@ -63,28 +63,15 @@ type tree struct {
 	pattern  string
 }
 
-func deploy(tr *tree, res http.ResponseWriter, req *http.Request) {
-	if nil == tr {
-		http.NotFound(res, req)
-	} else {
-		location, context := find(tr, req.URL.Path)
-		if nil == location || nil == location.handlers {
-			http.NotFound(res, req)
-		} else {
-			location.handlers[0](res, req, context)
-		}
-	}
-}
 func find(tr *tree, path string) (*tree, *Context) {
 	var (
 		components []string          = split(path)
 		current    *map[string]*tree = &tr.children
 		context    *Context          = &Context{
-			Params: make(map[string]string),
-			State:  make(map[string]interface{}),
-			tree:   tr}
+			State: make(map[string]interface{}),
+			tree:  tr}
 		last int   = len(components) - 1
-		wild *tree = &tree{}
+		wild *tree = nil
 	)
 	if nil != *current && nil != (*current)[wildcard] {
 		wild = (*current)[wildcard]
@@ -95,7 +82,7 @@ func find(tr *tree, path string) (*tree, *Context) {
 		} else if nil != wild {
 			return wild, context
 		} else {
-			return nil, context
+			return nil, nil
 		}
 	}
 	components, last = components[1:], last-1 // ignore the initial "/" component
@@ -103,7 +90,7 @@ func find(tr *tree, path string) (*tree, *Context) {
 		key := component
 		if nil == *current {
 			if nil == wild {
-				return nil, context
+				return nil, nil
 			} else {
 				context.tree = wild
 				return context.tree, context
@@ -112,7 +99,7 @@ func find(tr *tree, path string) (*tree, *Context) {
 		if nil == (*current)[key] {
 			if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
 				if nil == wild { // i.e. there is no wildcard up the tree
-					return nil, context
+					return nil, nil
 				} else {
 					context.tree = wild
 					return context.tree, context
@@ -121,13 +108,13 @@ func find(tr *tree, path string) (*tree, *Context) {
 				if nil != (*current)[wildcard] {
 					wild = (*current)[wildcard]
 					blob := strings.Join(components[index:], "")
-					context.Params[wild.name] = blob[:len(blob)-1]
+					context.param(asterisk, blob[:len(blob)-1])
 				}
 				if nil != (*current)[dynamic] {
 					key = dynamic
-					// all components have trailing slashes because of sanitize
+					// all components have trailing slashes because of split()
 					// so the final character needs to be dropped
-					context.Params[(*current)[key].name] = component[:len(component)-1]
+					context.param((*current)[key].name, component[:len(component)-1])
 				} else {
 					key = wildcard
 				}
@@ -145,11 +132,11 @@ func find(tr *tree, path string) (*tree, *Context) {
 			if nil != (*current)[wildcard] {
 				wild = (*current)[wildcard]
 				blob := strings.Join(components[index:], "")
-				context.Params[wild.name] = blob[:len(blob)-1]
+				context.param(asterisk, blob[:len(blob)-1])
 			}
 		}
 	}
-	return nil, context
+	return nil, nil
 }
 func handlerize(verb string, pattern string, fns []interface{}) (handlers []HandlerFunc, err error) {
 	var unreachable = false
@@ -193,18 +180,6 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 		}
 	}
 	return
-}
-func sanitize(s string) string {
-	if s == "" {
-		return slash // handle empty strings
-	}
-	if !strings.HasPrefix(s, slash) {
-		s = slash + s // prefix paths from root
-	}
-	if !strings.HasSuffix(s, slash) {
-		s = s + slash // end with slash
-	}
-	return strings.Replace(s, slash+slash, slash, -1) // replace double slashes
 }
 func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	var (
@@ -257,7 +232,17 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	return nil
 }
 func split(s string) []string {
-	tokens := strings.SplitAfter(sanitize(s), slash)
+	if s == "" || s == slash {
+		return []string{slash}
+	}
+	if !strings.HasPrefix(s, slash) {
+		s = slash + s // prefix paths from root
+	}
+	if !strings.HasSuffix(s, slash) {
+		s = s + slash // end with slash
+	}
+	s = strings.Replace(s, slash+slash, slash, -1) // replace double slashes
+	tokens := strings.SplitAfter(s, slash)
 	return tokens[:len(tokens)-1] // last token is always empty string
 }
 
@@ -268,6 +253,13 @@ func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
 	if uint8(len(ctx.tree.handlers)) > ctx.handler {
 		ctx.tree.handlers[ctx.handler](res, req, ctx)
 	}
+}
+
+func (ctx *Context) param(key string, value string) {
+	if nil == ctx.Params {
+		ctx.Params = make(map[string]string)
+	}
+	ctx.Params[key] = value
 }
 
 // Pattern returns the URL pattern that a request matched.
@@ -347,25 +339,37 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 
 // ServeHTTP allows a Mux instance to conform to the http.Handler interface.
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	var tr *tree
 	switch req.Method {
 	default:
 		http.NotFound(res, req)
+		return
 	case "CONNECT":
-		deploy(mux.connect, res, req)
+		tr = mux.connect
 	case "DELETE":
-		deploy(mux.delete, res, req)
+		tr = mux.delete
 	case "GET":
-		deploy(mux.get, res, req)
+		tr = mux.get
 	case "HEAD":
-		deploy(mux.head, res, req)
+		tr = mux.head
 	case "OPTIONS":
-		deploy(mux.options, res, req)
+		tr = mux.options
 	case "POST":
-		deploy(mux.post, res, req)
+		tr = mux.post
 	case "PUT":
-		deploy(mux.put, res, req)
+		tr = mux.put
 	case "TRACE":
-		deploy(mux.trace, res, req)
+		tr = mux.trace
+	}
+	if nil == tr {
+		http.NotFound(res, req)
+		return
+	}
+	location, context := find(tr, req.URL.Path)
+	if nil == location || nil == location.handlers {
+		http.NotFound(res, req)
+	} else {
+		location.handlers[0](res, req, context)
 	}
 }
 
