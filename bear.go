@@ -37,7 +37,7 @@ type Context struct {
 	// State is a utility map of string keys and empty interface values
 	// to allow one middleware to pass information to the next.
 	State   map[string]interface{}
-	handler uint8
+	handler int
 	tree    *tree
 }
 
@@ -63,7 +63,7 @@ type tree struct {
 	pattern  string
 }
 
-func find(tr *tree, path string) (*tree, *Context) {
+func find(tr *tree, path string) *Context {
 	var (
 		components []string          = split(path)
 		current    *map[string]*tree = &tr.children
@@ -78,11 +78,12 @@ func find(tr *tree, path string) (*tree, *Context) {
 	}
 	if 0 == last { // i.e. location is /
 		if nil != tr.handlers {
-			return tr, context
+			return context
 		} else if nil != wild {
-			return wild, context
+			context.tree = wild
+			return context
 		} else {
-			return nil, nil
+			return nil
 		}
 	}
 	components, last = components[1:], last-1 // ignore the initial "/" component
@@ -90,19 +91,19 @@ func find(tr *tree, path string) (*tree, *Context) {
 		key := component
 		if nil == *current {
 			if nil == wild {
-				return nil, nil
+				return nil
 			} else {
 				context.tree = wild
-				return context.tree, context
+				return context
 			}
 		}
 		if nil == (*current)[key] {
 			if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
 				if nil == wild { // i.e. there is no wildcard up the tree
-					return nil, nil
+					return nil
 				} else {
 					context.tree = wild
-					return context.tree, context
+					return context
 				}
 			} else {
 				if nil != (*current)[wildcard] {
@@ -126,7 +127,7 @@ func find(tr *tree, path string) (*tree, *Context) {
 			} else {
 				context.tree = (*current)[key]
 			}
-			return context.tree, context
+			return context
 		} else {
 			current = &(*current)[key].children
 			if nil != (*current)[wildcard] {
@@ -136,7 +137,7 @@ func find(tr *tree, path string) (*tree, *Context) {
 			}
 		}
 	}
-	return nil, nil
+	return nil
 }
 func handlerize(verb string, pattern string, fns []interface{}) (handlers []HandlerFunc, err error) {
 	var unreachable = false
@@ -250,7 +251,7 @@ func split(s string) []string {
 // a particular request pattern.
 func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
 	ctx.handler++
-	if uint8(len(ctx.tree.handlers)) > ctx.handler {
+	if len(ctx.tree.handlers) > ctx.handler {
 		ctx.tree.handlers[ctx.handler](res, req, ctx)
 	}
 }
@@ -365,11 +366,11 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		http.NotFound(res, req)
 		return
 	}
-	location, context := find(tr, req.URL.Path)
-	if nil == location || nil == location.handlers {
+	context := find(tr, req.URL.Path)
+	if nil == context || nil == context.tree.handlers {
 		http.NotFound(res, req)
 	} else {
-		location.handlers[0](res, req, context)
+		context.tree.handlers[0](res, req, context)
 	}
 }
 
