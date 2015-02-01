@@ -204,8 +204,7 @@ func sanitize(s string) string {
 	if !strings.HasSuffix(s, slash) {
 		s = s + slash // end with slash
 	}
-	s = strings.Replace(s, slash+slash, slash, -1) // replace double slashes
-	return s
+	return strings.Replace(s, slash+slash, slash, -1) // replace double slashes
 }
 func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	var (
@@ -257,13 +256,9 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	}
 	return nil
 }
-func split(s string) (components []string) {
-	for _, component := range strings.SplitAfter(sanitize(s), slash) {
-		if len(component) > 0 {
-			components = append(components, component)
-		}
-	}
-	return
+func split(s string) []string {
+	tokens := strings.SplitAfter(sanitize(s), slash)
+	return tokens[:len(tokens)-1] // last token is always empty string
 }
 
 // Next calls the next middleware (if any) that was registered as a handler for
