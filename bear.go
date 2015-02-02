@@ -60,7 +60,7 @@ type tree struct {
 	children map[string]*tree
 	handlers []HandlerFunc
 	name     string
-	pattern  *string
+	pattern  string
 }
 
 func find(tr *tree, path string) *Context {
@@ -191,7 +191,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 		if nil != tr.handlers {
 			return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 		} else {
-			tr.pattern = &pattern
+			tr.pattern = pattern
 			tr.handlers = handlers
 			return nil
 		}
@@ -222,7 +222,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 			if nil != (*current)[key].handlers {
 				return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 			}
-			(*current)[key].pattern = &pattern
+			(*current)[key].pattern = pattern
 			(*current)[key].handlers = handlers
 			return nil
 		} else if key == wildcard {
@@ -264,7 +264,7 @@ func (ctx *Context) param(key string, value string) {
 }
 
 // Pattern returns the URL pattern that a request matched.
-func (ctx *Context) Pattern() string { return *(ctx.tree.pattern) }
+func (ctx *Context) Pattern() string { return ctx.tree.pattern }
 
 /*
 On adds HTTP verb handler(s) for a URL pattern. The handler argument(s)
