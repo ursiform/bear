@@ -60,23 +60,23 @@ type tree struct {
 	children map[string]*tree
 	handlers []HandlerFunc
 	name     string
-	pattern  string
+	pattern  *string
 }
 
 func find(tr *tree, path string) *Context {
 	var (
-		components []string          = split(path)
+		components []string
 		current    *map[string]*tree = &tr.children
 		context    *Context          = &Context{
 			State: make(map[string]interface{}),
 			tree:  tr}
-		last int   = len(components) - 1
+		last int
 		wild *tree = nil
 	)
 	if nil != *current && nil != (*current)[wildcard] {
 		wild = (*current)[wildcard]
 	}
-	if 0 == last { // i.e. location is /
+	if path == slash {
 		if nil != tr.handlers {
 			return context
 		} else if nil != wild {
@@ -86,7 +86,8 @@ func find(tr *tree, path string) *Context {
 			return nil
 		}
 	}
-	components, last = components[1:], last-1 // ignore the initial "/" component
+	components = split(path)
+	last = len(components) - 1
 	for index, component := range components {
 		key := component
 		if nil == *current {
@@ -161,20 +162,18 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
-			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, _ *Context) {
 				fn.(http.HandlerFunc)(res, req)
-			}
-			handlers = append(handlers, HandlerFunc(wrapper))
+			}))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
 				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb, pattern)
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
-			wrapper := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, _ *Context) {
 				http.HandlerFunc(fn.(func(http.ResponseWriter, *http.Request)))(res, req)
-			}
-			handlers = append(handlers, HandlerFunc(wrapper))
+			}))
 		default:
 			err = fmt.Errorf("bear: handler needs to match http.HandlerFunc OR bear.HandlerFunc")
 			return
@@ -184,15 +183,15 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 }
 func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 	var (
-		components []string          = split(pattern)
+		components []string
 		current    *map[string]*tree = &tr.children
-		last       int               = len(components) - 1
+		last       int
 	)
-	if 0 == last {
+	if pattern == slash {
 		if nil != tr.handlers {
 			return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 		} else {
-			tr.pattern = pattern
+			tr.pattern = &pattern
 			tr.handlers = handlers
 			return nil
 		}
@@ -201,7 +200,8 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 		tr.children = make(map[string]*tree)
 	}
 	dyn := regexp.MustCompile(word)
-	components, last = components[1:], last-1 // ignore the initial "/" component
+	components = split(pattern)
+	last = len(components) - 1
 	for index, component := range components {
 		var (
 			match []string = dyn.FindStringSubmatch(component)
@@ -222,7 +222,7 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 			if nil != (*current)[key].handlers {
 				return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 			}
-			(*current)[key].pattern = pattern
+			(*current)[key].pattern = &pattern
 			(*current)[key].handlers = handlers
 			return nil
 		} else if key == wildcard {
@@ -236,15 +236,15 @@ func split(s string) []string {
 	if s == "" || s == slash {
 		return []string{slash}
 	}
+	var prefix, suffix string
 	if !strings.HasPrefix(s, slash) {
-		s = slash + s // prefix paths from root
+		prefix = slash // prefix paths from root
 	}
-	if !strings.HasSuffix(s, slash) {
-		s = s + slash // end with slash
+	if slash != s[len(s)-1:] {
+		suffix = slash // end with slash
 	}
-	s = strings.Replace(s, slash+slash, slash, -1) // replace double slashes
-	tokens := strings.SplitAfter(s, slash)
-	return tokens[:len(tokens)-1] // last token is always empty string
+	tokens := strings.SplitAfter(strings.Replace(prefix+s+suffix, slash+slash, slash, -1), slash)
+	return tokens[1 : len(tokens)-1] // first token is always / and last token is always empty string
 }
 
 // Next calls the next middleware (if any) that was registered as a handler for
@@ -264,7 +264,7 @@ func (ctx *Context) param(key string, value string) {
 }
 
 // Pattern returns the URL pattern that a request matched.
-func (ctx *Context) Pattern() string { return ctx.tree.pattern }
+func (ctx *Context) Pattern() string { return *(ctx.tree.pattern) }
 
 /*
 On adds HTTP verb handler(s) for a URL pattern. The handler argument(s)
