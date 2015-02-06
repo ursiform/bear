@@ -81,7 +81,7 @@ type Context struct {
 ```go
 func (ctx *Context) Get(key string) interface{}
 ```
-`Get` allows retrieving a state value (interface{})
+`Get` allows retrieving a state value (`interface{}`)
 
 #### func (*Context) Next
 
