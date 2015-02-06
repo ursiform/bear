@@ -156,12 +156,12 @@ func TestMiddleware(t *testing.T) {
 		)
 		one := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++
-			ctx.State["one"] = 1
+			ctx.Set("one", 1)
 			ctx.Next(res, req)
 		}
 		two := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++
-			ctx.State["two"] = 2
+			ctx.Set("two", 2)
 			ctx.Next(res, req)
 		}
 		last := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
@@ -169,8 +169,8 @@ func TestMiddleware(t *testing.T) {
 			if !reflect.DeepEqual(params, ctx.Params) {
 				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern, ctx.Params, params)
 			}
-			if !reflect.DeepEqual(state, ctx.State) {
-				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern, ctx.State, state)
+			if !reflect.DeepEqual(state, ctx.state) {
+				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern, ctx.state, state)
 			}
 		}
 		req, _ = http.NewRequest(method, path, nil)
@@ -360,7 +360,25 @@ func TestWildcardNotLast(t *testing.T) {
 		t.Errorf("wildcard pattern (%s) with non-final wildcard token was accepted", pattern)
 	}
 }
-
+func TestWildcardMethod(t *testing.T) {
+	var (
+		mux     *Mux   = New()
+		path    string = "/foo/bar"
+		pattern string = "/foo/bar"
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+		want    int = http.StatusOK
+	)
+	mux.On("*", pattern, func(http.ResponseWriter, *http.Request, *Context) {})
+	for _, verb := range verbs {
+		req, _ = http.NewRequest(verb, path, nil)
+		res = httptest.NewRecorder()
+		mux.ServeHTTP(res, req)
+		if res.Code != want {
+			t.Errorf("%s %s (%s) got %d want %d", verb, path, pattern, res.Code, want)
+		}
+	}
+}
 func TestWildcardParams(t *testing.T) {
 	var (
 		method  string = "GET"

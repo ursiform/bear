@@ -19,24 +19,26 @@ import (
 )
 
 const (
-	asterisk  = "*"
-	dynamic   = "\x00"
-	lasterisk = "*/"
-	slash     = "/"
-	wildcard  = "\x00\x00"
-	word      = `\{(\w+)\}`
+	asterisk    = "*"
+	doubleslash = "//"
+	dynamic     = "\x00"
+	empty       = ""
+	lasterisk   = "*/"
+	slash       = "/"
+	wildcard    = "\x00\x00"
 )
 
-var verbs []string = []string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
+var (
+	dyn   *regexp.Regexp = regexp.MustCompile(`\{(\w+)\}`)
+	verbs [8]string      = [8]string{"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
+)
 
 type Context struct {
 	// Params is a map of string keys with string values that is populated
 	// by the dynamic URL parameters (if any).
 	// Wildcard params are accessed by using an asterisk: Params["*"]
-	Params map[string]string
-	// State is a utility map of string keys and empty interface values
-	// to allow one middleware to pass information to the next.
-	State   map[string]interface{}
+	Params  map[string]string
+	state   map[string]interface{}
 	handler int
 	tree    *tree
 }
@@ -54,6 +56,7 @@ type Mux struct {
 	post    *tree
 	put     *tree
 	trace   *tree
+	wild    bool
 }
 
 type tree struct {
@@ -63,85 +66,8 @@ type tree struct {
 	pattern  string
 }
 
-func find(tr *tree, path string) *Context {
-	var (
-		components []string
-		current    *map[string]*tree = &tr.children
-		context    *Context          = &Context{
-			State: make(map[string]interface{}),
-			tree:  tr}
-		last int
-		wild *tree = nil
-	)
-	if nil != *current && nil != (*current)[wildcard] {
-		wild = (*current)[wildcard]
-	}
-	if path == slash {
-		if nil != tr.handlers {
-			return context
-		} else if nil != wild {
-			context.tree = wild
-			return context
-		} else {
-			return nil
-		}
-	}
-	components = split(path)
-	last = len(components) - 1
-	for index, component := range components {
-		key := component
-		if nil == *current {
-			if nil == wild {
-				return nil
-			} else {
-				context.tree = wild
-				return context
-			}
-		}
-		if nil == (*current)[key] {
-			if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
-				if nil == wild { // i.e. there is no wildcard up the tree
-					return nil
-				} else {
-					context.tree = wild
-					return context
-				}
-			} else {
-				if nil != (*current)[wildcard] {
-					wild = (*current)[wildcard]
-					blob := strings.Join(components[index:], "")
-					context.param(asterisk, blob[:len(blob)-1])
-				}
-				if nil != (*current)[dynamic] {
-					key = dynamic
-					// all components have trailing slashes because of split()
-					// so the final character needs to be dropped
-					context.param((*current)[key].name, component[:len(component)-1])
-				} else {
-					key = wildcard
-				}
-			}
-		}
-		if index == last {
-			if (*current)[key].handlers == nil && wild != nil {
-				context.tree = wild
-			} else {
-				context.tree = (*current)[key]
-			}
-			return context
-		} else {
-			current = &(*current)[key].children
-			if nil != (*current)[wildcard] {
-				wild = (*current)[wildcard]
-				blob := strings.Join(components[index:], "")
-				context.param(asterisk, blob[:len(blob)-1])
-			}
-		}
-	}
-	return nil
-}
 func handlerize(verb string, pattern string, fns []interface{}) (handlers []HandlerFunc, err error) {
-	var unreachable = false
+	unreachable := false
 	for _, fn := range fns {
 		switch fn.(type) {
 		case HandlerFunc:
@@ -162,8 +88,9 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
+			handler := fn.(http.HandlerFunc)
 			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, _ *Context) {
-				fn.(http.HandlerFunc)(res, req)
+				handler(res, req)
 			}))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
@@ -171,8 +98,9 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 				return
 			}
 			unreachable = true // after a non bear.HandlerFunc handler, all other handlers are unreachable
+			handler := fn.(func(http.ResponseWriter, *http.Request))
 			handlers = append(handlers, HandlerFunc(func(res http.ResponseWriter, req *http.Request, _ *Context) {
-				http.HandlerFunc(fn.(func(http.ResponseWriter, *http.Request)))(res, req)
+				handler(res, req)
 			}))
 		default:
 			err = fmt.Errorf("bear: handler needs to match http.HandlerFunc OR bear.HandlerFunc")
@@ -181,27 +109,35 @@ func handlerize(verb string, pattern string, fns []interface{}) (handlers []Hand
 	}
 	return
 }
-func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
-	var (
-		components []string
-		current    *map[string]*tree = &tr.children
-		last       int
-	)
+func sanitize(s string) string {
+	if s == empty || s == slash {
+		return slash
+	}
+	if !strings.HasPrefix(s, slash) { // start with slash
+		s = slash + s
+	}
+	if slash != s[len(s)-1:] { // end with slash
+		s = s + slash
+	}
+	return strings.Replace(s, doubleslash, slash, -1)
+}
+func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) (wild bool, err error) {
 	if pattern == slash {
 		if nil != tr.handlers {
-			return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
+			return false, fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 		} else {
 			tr.pattern = pattern
 			tr.handlers = handlers
-			return nil
+			return false, nil
 		}
 	}
 	if nil == tr.children {
 		tr.children = make(map[string]*tree)
 	}
-	dyn := regexp.MustCompile(word)
-	components = split(pattern)
-	last = len(components) - 1
+	current := &tr.children
+	components := strings.SplitAfter(sanitize(pattern), slash)
+	components = components[1 : len(components)-1] // first token is "/" and last token is ""
+	last := len(components) - 1
 	for index, component := range components {
 		var (
 			match []string = dyn.FindStringSubmatch(component)
@@ -209,58 +145,62 @@ func set(verb string, tr *tree, pattern string, handlers []HandlerFunc) error {
 			name  string
 		)
 		if 0 < len(match) {
-			key = dynamic
-			name = match[1]
+			key, name = dynamic, match[1]
 		} else if key == lasterisk {
-			key = wildcard
-			name = asterisk
+			key, name = wildcard, asterisk
+			wild = true
 		}
 		if nil == (*current)[key] {
 			(*current)[key] = &tree{children: make(map[string]*tree), name: name}
 		}
 		if index == last {
 			if nil != (*current)[key].handlers {
-				return fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
+				return false, fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 			}
 			(*current)[key].pattern = pattern
 			(*current)[key].handlers = handlers
-			return nil
+			return wild, nil
 		} else if key == wildcard {
-			return fmt.Errorf("bear: %s %s wildcard (%s) tokens must be the final token", verb, pattern, asterisk)
+			return false, fmt.Errorf("bear: %s %s wildcard (%s) token must be last", verb, pattern, asterisk)
 		}
 		current = &(*current)[key].children
 	}
-	return nil
+	return wild, nil
 }
-func split(s string) []string {
-	if s == "" || s == slash {
-		return []string{slash}
+
+// Get allows retrieving a state value (interface{})
+func (ctx *Context) Get(key string) interface{} {
+	if nil == ctx.state {
+		return nil
+	} else {
+		return ctx.state[key]
 	}
-	var prefix, suffix string
-	if !strings.HasPrefix(s, slash) {
-		prefix = slash // prefix paths from root
-	}
-	if slash != s[len(s)-1:] {
-		suffix = slash // end with slash
-	}
-	tokens := strings.SplitAfter(strings.Replace(prefix+s+suffix, slash+slash, slash, -1), slash)
-	return tokens[1 : len(tokens)-1] // first token is always / and last token is always empty string
 }
 
 // Next calls the next middleware (if any) that was registered as a handler for
 // a particular request pattern.
 func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
+	handlers := len(ctx.tree.handlers)
 	ctx.handler++
-	if len(ctx.tree.handlers) > ctx.handler {
+	if handlers > ctx.handler {
 		ctx.tree.handlers[ctx.handler](res, req, ctx)
 	}
 }
 
-func (ctx *Context) param(key string, value string) {
+func (ctx *Context) param(key string, value string, capacity int) {
 	if nil == ctx.Params {
-		ctx.Params = make(map[string]string)
+		ctx.Params = make(map[string]string, capacity)
 	}
-	ctx.Params[key] = value
+	ctx.Params[key] = value[:len(value)-1]
+}
+
+// Set allows setting an arbitrary value (interface{}) to a string key
+// to allow one middleware to pass information to the next.
+func (ctx *Context) Set(key string, value interface{}) {
+	if nil == ctx.state {
+		ctx.state = make(map[string]interface{})
+	}
+	ctx.state[key] = value
 }
 
 // Pattern returns the URL pattern that a request matched.
@@ -303,86 +243,160 @@ wildcard pattern "/*" which will match the request path / if no root
 handler exists.
 */
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
-	var tr *tree
-	switch verb {
-	default:
-		return fmt.Errorf("bear: %s isn't a valid HTTP verb", verb)
-	case "*":
+	if verb == asterisk {
 		for _, verb := range verbs {
 			if err := mux.On(verb, pattern, handlers...); err != nil {
 				return err
 			}
 		}
 		return nil
-	case "CONNECT":
-		tr = mux.connect
-	case "DELETE":
-		tr = mux.delete
-	case "GET":
-		tr = mux.get
-	case "HEAD":
-		tr = mux.head
-	case "OPTIONS":
-		tr = mux.options
-	case "POST":
-		tr = mux.post
-	case "PUT":
-		tr = mux.put
-	case "TRACE":
-		tr = mux.trace
+	}
+	var tr *tree = mux.tree(verb)
+	if nil == tr {
+		return fmt.Errorf("bear: %s isn't a valid HTTP verb", verb)
 	}
 	if fns, err := handlerize(verb, pattern, handlers); err != nil {
 		return err
 	} else {
-		return set(verb, tr, pattern, fns)
+		if wild, err := set(verb, tr, pattern, fns); err != nil {
+			return err
+		} else {
+			mux.wild = mux.wild || wild
+			return nil
+		}
 	}
 }
 
 // ServeHTTP allows a Mux instance to conform to the http.Handler interface.
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	var tr *tree
-	switch req.Method {
-	default:
-		http.NotFound(res, req)
-		return
-	case "CONNECT":
-		tr = mux.connect
-	case "DELETE":
-		tr = mux.delete
-	case "GET":
-		tr = mux.get
-	case "HEAD":
-		tr = mux.head
-	case "OPTIONS":
-		tr = mux.options
-	case "POST":
-		tr = mux.post
-	case "PUT":
-		tr = mux.put
-	case "TRACE":
-		tr = mux.trace
-	}
-	if nil == tr {
+	tr := mux.tree(req.Method)
+	if nil == tr { // i.e. if req.Method is not found in HTTP verbs
 		http.NotFound(res, req)
 		return
 	}
-	context := find(tr, req.URL.Path)
-	if nil == context || nil == context.tree.handlers {
+	if req.URL.Path == slash { // root is a special case because it is the top node in the tree
+		if nil != tr.handlers { // root match
+			tr.handlers[0](res, req, &Context{tree: tr})
+			return
+		} else if wild := tr.children[wildcard]; nil != wild { // root level wildcard pattern match
+			wild.handlers[0](res, req, &Context{tree: wild})
+			return
+		}
 		http.NotFound(res, req)
+		return
+	}
+	var key string
+	components := strings.SplitAfter(sanitize(req.URL.Path), slash)
+	components = components[1 : len(components)-1] // first token is "/" and last token is ""
+	context := new(Context)
+	current := &tr.children
+	capacity := len(components) // maximum number of URL params possible for this request
+	last := capacity - 1
+	if !mux.wild { // no wildcards: simpler, slightly faster
+		for index, component := range components {
+			key = component
+			if nil == *current {
+				http.NotFound(res, req)
+				return
+			} else if nil == (*current)[key] {
+				if nil == (*current)[dynamic] {
+					http.NotFound(res, req)
+					return
+				} else {
+					key = dynamic
+					context.param((*current)[key].name, component, capacity)
+				}
+			}
+			if index == last {
+				if nil == (*current)[key].handlers {
+					http.NotFound(res, req)
+				} else {
+					context.tree = (*current)[key]
+					context.tree.handlers[0](res, req, context)
+				}
+				return
+			}
+			current = &(*current)[key].children
+		}
 	} else {
-		context.tree.handlers[0](res, req, context)
+		wild := tr.children[wildcard]
+		for index, component := range components {
+			key = component
+			if nil == *current {
+				if nil == wild {
+					http.NotFound(res, req)
+				} else { // wildcard pattern match
+					context.tree = wild
+					context.tree.handlers[0](res, req, context)
+				}
+				return
+			}
+			if nil == (*current)[key] {
+				if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
+					if nil == wild { // i.e. there is no wildcard up the tree
+						http.NotFound(res, req)
+					} else { // wildcard pattern match
+						context.tree = wild
+						wild.handlers[0](res, req, context)
+					}
+					return
+				} else {
+					if nil != (*current)[wildcard] { // i.e. there is a more proximate wildcard
+						wild = (*current)[wildcard]
+						context.param(asterisk, strings.Join(components[index:], empty), capacity)
+					}
+					if nil != (*current)[dynamic] {
+						key = dynamic
+						context.param((*current)[key].name, component, capacity)
+					} else { // wildcard pattern match
+						context.tree = wild
+						wild.handlers[0](res, req, context)
+						return
+					}
+				}
+			}
+			if index == last {
+				if nil == (*current)[key].handlers {
+					http.NotFound(res, req)
+				} else { // non-wildcard pattern match
+					context.tree = (*current)[key]
+					context.tree.handlers[0](res, req, context)
+				}
+				return
+			}
+			current = &(*current)[key].children
+			if nil != (*current)[wildcard] { // i.e. there is a more proximate wildcard
+				wild = (*current)[wildcard]
+				context.param(asterisk, strings.Join(components[index:], empty), capacity)
+			}
+		}
+	}
+}
+
+func (mux *Mux) tree(name string) *tree {
+	switch name {
+	case "CONNECT":
+		return mux.connect
+	case "DELETE":
+		return mux.delete
+	case "GET":
+		return mux.get
+	case "HEAD":
+		return mux.head
+	case "OPTIONS":
+		return mux.options
+	case "POST":
+		return mux.post
+	case "PUT":
+		return mux.put
+	case "TRACE":
+		return mux.trace
+	default:
+		return nil
 	}
 }
 
 // New returns a pointer to a bear Mux multiplexer
 func New() *Mux {
-	return &Mux{
-		connect: &tree{},
-		delete:  &tree{},
-		get:     &tree{},
-		head:    &tree{},
-		options: &tree{},
-		post:    &tree{},
-		put:     &tree{},
-		trace:   &tree{}}
+	return &Mux{&tree{}, &tree{}, &tree{}, &tree{}, &tree{}, &tree{}, &tree{}, &tree{}, false}
 }

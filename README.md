@@ -26,18 +26,18 @@ func notfound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Write([]byte("Sorry, not found!\n"))
 }
 func one(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.State["one"] = "set in func one"
+    ctx.Set("one", "set in func one")
     ctx.Next(res, req)
 }
 func two(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.State["two"] = "set in func two"
+    ctx.Set("two", "set in func two")
     ctx.Next(res, req)
 }
 func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     var (
         greet  string = fmt.Sprintf("Hello, %s!\n", ctx.Params["user"])
-        first  string = ctx.State["one"].(string) // assert type: interface{} as string
-        second string = ctx.State["two"].(string) // assert type: interface{} as string
+        first  string = ctx.Get("one").(string) // assert type: interface{} as string
+        second string = ctx.Get("two").(string) // assert type: interface{} as string
         state  string = fmt.Sprintf("state one: %s\nstate two: %s\n", first, second)
     )
     res.Header().Set("Content-Type", "text/plain")
@@ -45,8 +45,8 @@ func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 }
 func main() {
     mux := bear.New()
-    mux.On("GET", "/hello/{user}", one, two, three) // custom URL param {user}
-    mux.On("*", "/*", notfound)                     // wildcard to handle 404s
+    mux.On("GET", "/hello/{user}", one, two, three) // dynamic URL parameter {user}
+    mux.On("*", "/*", notfound)                     // use wildcard for custom 404
     http.ListenAndServe(":1337", mux)
 }
 ```
@@ -73,12 +73,15 @@ type Context struct {
     // by the dynamic URL parameters (if any).
     // Wildcard params are accessed by using an asterisk: Params["*"]
     Params map[string]string
-    // State is a utility map of string keys and empty interface values
-    // to allow one middleware to pass information to the next.
-    State map[string]interface{}
 }
 ```
 
+#### func (*Context) Get
+
+```go
+func (ctx *Context) Get(key string) interface{}
+```
+`Get` allows retrieving a state value (interface{})
 
 #### func (*Context) Next
 
@@ -93,7 +96,15 @@ particular request pattern.
 ```go
 func (ctx *Context) Pattern() string
 ```
-Pattern returns the URL pattern that a request matched.
+`Pattern` returns the URL pattern that a request matched.
+
+#### func (*Context) Set
+
+```go
+func (ctx *Context) Set(key string, value interface{})
+```
+`Set` allows setting an arbitrary value (`interface{}`) to a string key to allow one
+middleware to pass information to the next.
 
 #### type HandlerFunc
 
