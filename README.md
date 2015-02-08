@@ -1,7 +1,7 @@
 # *b*ear: *e*mbeddable *a*pplication *r*outer
 `bear.Mux` is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
-and accepts both native `http.HandlerFunc` or `bear.HandlerFunc` (which accepts an extra `*Context` argument that allows
-storing `State` and calling the `Next` middleware)
+and accepts both native `http.HandlerFunc` or `bear.HandlerFunc`, which accepts an extra `*Context` argument
+that allows storing state (using the `Get()` and `Set()` methods) and calling the `Next()` middleware.
 
 ## Install
 ```
