@@ -307,6 +307,50 @@ func TestNotFoundParams(t *testing.T) {
 		simpleBearAnonTest("anonymous http.HandlerFunc", verb, path, pattern, want)(t)
 	}
 }
+func TestSanitizePatternPrefixSuffix(t *testing.T) {
+	var (
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "foo/{bar}/*"
+		path    string = "/foo/ABC/baz"
+		want    string = "/foo/{bar}/*/"
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+	)
+	handler := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte(ctx.Pattern()))
+	}
+	mux.On(method, pattern, handler)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != want {
+		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
+	}
+}
+func TestSanitizePatternDoubleSlash(t *testing.T) {
+	var (
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "///foo///{bar}////*//"
+		path    string = "/foo/ABC/baz"
+		want    string = "/foo/{bar}/*/"
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+	)
+	handler := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		res.WriteHeader(http.StatusOK)
+		res.Write([]byte(ctx.Pattern()))
+	}
+	mux.On(method, pattern, handler)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if body := res.Body.String(); body != want {
+		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
+	}
+}
 func TestWildcardCompeting(t *testing.T) {
 	var (
 		method       string = "GET"

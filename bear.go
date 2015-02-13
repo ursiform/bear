@@ -14,17 +14,18 @@ package bear
 import "regexp"
 
 const ( // global constants
-	asterisk    = "*"
-	doubleslash = "//"
-	dynamic     = "\x00"
-	empty       = ""
-	lasterisk   = "*/"
-	slash       = "/"
-	wildcard    = "\x00\x00"
+	asterisk  = "*"
+	dynamic   = "\x00"
+	empty     = ""
+	lasterisk = "*/"
+	slash     = "/"
+	slashr    = '/'
+	wildcard  = "\x00\x00"
 )
 
 var ( // global variables
 	dyn   *regexp.Regexp = regexp.MustCompile(`\{(\w+)\}`)
+	dbl   *regexp.Regexp = regexp.MustCompile(`[\/]{2,}`)
 	verbs [8]string      = [8]string{
 		"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
 )

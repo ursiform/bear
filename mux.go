@@ -22,27 +22,47 @@ type Mux struct {
 	wild    bool
 }
 
-func sanitize(s string) string {
-	if s == empty || s == slash {
-		return slash
+func parsePath(s string) (components []string, last int) {
+	start, offset := 0, 0
+	if slashr == s[0] {
+		start = 1
 	}
-	if !strings.HasPrefix(s, slash) { // start with slash
-		s = slash + s
+	if slashr == s[len(s)-1] {
+		offset = 1
 	}
-	if slash != s[len(s)-1:] { // end with slash
-		s = s + slash
+	components = strings.SplitAfter(s, slash)
+	if start == 1 || offset == 1 {
+		components = components[start : len(components)-offset]
 	}
-	return strings.Replace(s, doubleslash, slash, -1)
+	last = len(components) - 1
+	if offset == 0 {
+		components[last] = components[last] + slash
+	}
+	return components, last
+}
+
+func parsePattern(s string) (pattern string, components []string, last int) {
+	if slashr != s[0] {
+		s = slash + s // start with slash
+	}
+	if slashr != s[len(s)-1] {
+		s = s + slash // end with slash
+	}
+	pattern = dbl.ReplaceAllString(s, slash)
+	components = strings.SplitAfter(pattern, slash)
+	components = components[1 : len(components)-1]
+	last = len(components) - 1
+	return pattern, components, last
 }
 
 func set(verb string, tr *tree, pattern string,
 	handlers []HandlerFunc) (wild bool, err error) {
-	if pattern == slash {
+	if pattern == slash || pattern == empty {
 		if nil != tr.handlers {
-			return false, fmt.Errorf("bear: %s %s exists, ignoring", verb,
-				pattern)
+			return false,
+				fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 		} else {
-			tr.pattern = pattern
+			tr.pattern = slash
 			tr.handlers = handlers
 			return false, nil
 		}
@@ -51,10 +71,7 @@ func set(verb string, tr *tree, pattern string,
 		tr.children = make(map[string]*tree)
 	}
 	current := &tr.children
-	components := strings.SplitAfter(sanitize(pattern), slash)
-	// first token is "/" and last token is ""
-	components = components[1 : len(components)-1]
-	last := len(components) - 1
+	pattern, components, last := parsePattern(pattern)
 	for index, component := range components {
 		var (
 			match []string = dyn.FindStringSubmatch(component)
@@ -80,9 +97,9 @@ func set(verb string, tr *tree, pattern string,
 			(*current)[key].handlers = handlers
 			return wild, nil
 		} else if key == wildcard {
-			return false, fmt.Errorf(
-				"bear: %s %s wildcard (%s) token must be last",
-				verb, pattern, asterisk)
+			return false,
+				fmt.Errorf("bear: %s %s wildcard (%s) token must be last",
+					verb, pattern, asterisk)
 		}
 		current = &(*current)[key].children
 	}
@@ -153,12 +170,12 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 // ServeHTTP allows a Mux instance to conform to the http.Handler interface.
 func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	tr := mux.tree(req.Method)
-	if nil == tr { // i.e. if req.Method is not found in HTTP verbs
+	if nil == tr { // if req.Method is not found in HTTP verbs
 		http.NotFound(res, req)
 		return
 	}
 	// root is a special case because it is the top node in the tree
-	if req.URL.Path == slash {
+	if req.URL.Path == slash || req.URL.Path == empty {
 		if nil != tr.handlers { // root match
 			tr.handlers[0](res, req, &Context{tree: tr})
 			return
@@ -171,14 +188,10 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	var key string
-	components := strings.SplitAfter(sanitize(req.URL.Path), slash)
-	// first token is "/" and last token is ""
-	components = components[1 : len(components)-1]
+	components, last := parsePath(req.URL.Path)
+	capacity := last + 1 // maximum number of params possible for this request
 	context := new(Context)
 	current := &tr.children
-	// maximum number of URL params possible for this request
-	capacity := len(components)
-	last := capacity - 1
 	if !mux.wild { // no wildcards: simpler, slightly faster
 		for index, component := range components {
 			key = component
@@ -220,7 +233,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			}
 			if nil == (*current)[key] {
 				if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
-					if nil == wild { // i.e. there is no wildcard up the tree
+					if nil == wild { // there's no wildcard up the tree
 						http.NotFound(res, req)
 					} else { // wildcard pattern match
 						context.tree = wild
@@ -255,8 +268,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			}
 			current = &(*current)[key].children
 			if nil != (*current)[wildcard] {
-				// i.e. there is a more proximate wildcard
-				wild = (*current)[wildcard]
+				wild = (*current)[wildcard] // there's a more proximate wildcard
 				context.param(asterisk,
 					strings.Join(components[index:], empty), capacity)
 			}
