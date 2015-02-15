@@ -20,23 +20,23 @@ func handlerize(verb string, pattern string,
 		switch fn.(type) {
 		case HandlerFunc:
 			if unreachable {
-				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb,
-					pattern)
+				err = fmt.Errorf("bear: %s %s has unreachable middleware",
+					verb, pattern)
 				return
 			}
 			handlers = append(handlers, HandlerFunc(fn.(HandlerFunc)))
 		case func(http.ResponseWriter, *http.Request, *Context):
 			if unreachable {
-				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb,
-					pattern)
+				err = fmt.Errorf("bear: %s %s has unreachable middleware",
+					verb, pattern)
 				return
 			}
 			handlers = append(handlers, HandlerFunc(
 				fn.(func(http.ResponseWriter, *http.Request, *Context))))
 		case http.HandlerFunc:
 			if unreachable {
-				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb,
-					pattern)
+				err = fmt.Errorf("bear: %s %s has unreachable middleware",
+					verb, pattern)
 				return
 			}
 			// after non HandlerFunc handlers, other handlers are unreachable
@@ -48,8 +48,8 @@ func handlerize(verb string, pattern string,
 			}))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
-				err = fmt.Errorf("bear: %s %s has unreachable middleware", verb,
-					pattern)
+				err = fmt.Errorf("bear: %s %s has unreachable middleware",
+					verb, pattern)
 				return
 			}
 			// after non HandlerFunc handlers, other handlers are unreachable
