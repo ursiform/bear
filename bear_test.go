@@ -404,6 +404,22 @@ func TestNotFoundParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+func TestNotFoundRoot(t *testing.T) {
+	var (
+		method string = "GET"
+		mux    *Mux   = New()
+		path   string = "/"
+		req    *http.Request
+		res    *httptest.ResponseRecorder
+		want   int = http.StatusNotFound
+	)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if res.Code != want {
+		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
+	}
+}
 func TestNotFoundWild(t *testing.T) {
 	var (
 		path    string = "/foo"
@@ -421,15 +437,20 @@ func TestNotFoundWild(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
-func TestNotFoundRoot(t *testing.T) {
+func TestNotFoundWildTwo(t *testing.T) {
 	var (
-		method string = "GET"
-		mux    *Mux   = New()
-		path   string = "/"
-		req    *http.Request
-		res    *httptest.ResponseRecorder
-		want   int = http.StatusNotFound
+		method     string = "GET"
+		mux        *Mux   = New()
+		path       string = "/bar/baz"
+		patternOne string = "/foo/*"
+		patternTwo string = "/bar"
+		req        *http.Request
+		res        *httptest.ResponseRecorder
+		want       int = http.StatusNotFound
 	)
+	handler := func(http.ResponseWriter, *http.Request) {}
+	mux.On(method, patternOne, handler)
+	mux.On(method, patternTwo, handler)
 	req, _ = http.NewRequest(method, path, nil)
 	res = httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
