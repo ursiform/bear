@@ -458,6 +458,27 @@ func TestNotFoundWildTwo(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
+func TestOKMultiRuleParams(t *testing.T) {
+	var (
+		method     string = "GET"
+		mux        *Mux   = New()
+		path       string = "/bar/baz"
+		patternOne string = "/foo/*"
+		patternTwo string = "/bar/baz"
+		req        *http.Request
+		res        *httptest.ResponseRecorder
+		want       int = http.StatusOK
+	)
+	handler := func(http.ResponseWriter, *http.Request) {}
+	mux.On(method, patternOne, handler)
+	mux.On(method, patternTwo, handler)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if res.Code != want {
+		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
+	}
+}
 func TestOKNoParams(t *testing.T) {
 	var (
 		path    string = "/foo/bar"
