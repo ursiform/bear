@@ -103,7 +103,7 @@ func set(verb string, tr *tree, pattern string,
 		}
 		current = &(*current)[key].children
 	}
-	return wild, nil
+	return wild, nil // will never reach here, return is just for compiler
 }
 
 /*

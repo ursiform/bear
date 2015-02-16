@@ -147,11 +147,61 @@ func simpleBearAnonTest(label string, method string, path string,
 	}
 }
 
+func TestBadHandler(t *testing.T) {
+	mux := New()
+	handlerBad := func(res http.ResponseWriter) {}
+	if err := mux.On("*", "*", handlerBad); nil == err {
+		t.Errorf("handlerBad should not be accepted")
+	}
+}
+func TestBadVerbOn(t *testing.T) {
+	mux := New()
+	verb := "BLUB"
+	handler := func(http.ResponseWriter, *http.Request) {}
+	if err := mux.On(verb, "*", handler); nil == err {
+		t.Errorf("%s should not be accepted", verb)
+	}
+}
+func TestBadVerbServe(t *testing.T) {
+	var (
+		method  string = "BLUB"
+		mux     *Mux   = New()
+		pattern string = "/"
+		path    string = "/"
+		want    int    = http.StatusNotFound
+		req     *http.Request
+		res     *httptest.ResponseRecorder
+	)
+	handler := func(res http.ResponseWriter, req *http.Request) {}
+	mux.On("*", pattern, handler)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if status := res.Code; status != want {
+		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
+	}
+}
 func TestDuplicateFailure(t *testing.T) {
 	var (
 		handler HandlerFunc
 		mux     *Mux   = New()
 		pattern string = "/foo/{bar}"
+	)
+	handler = HandlerFunc(func(http.ResponseWriter, *http.Request, *Context) {})
+	for _, verb := range verbs {
+		if err := mux.On(verb, pattern, handler); err != nil {
+			t.Error(err)
+		} else if err := mux.On(verb, pattern, handler); err == nil {
+			t.Errorf("%s %s addition must fail because it is a duplicate", verb,
+				pattern)
+		}
+	}
+}
+func TestDuplicateFailureRoot(t *testing.T) {
+	var (
+		handler HandlerFunc
+		mux     *Mux   = New()
+		pattern string = "/"
 	)
 	handler = HandlerFunc(func(http.ResponseWriter, *http.Request, *Context) {})
 	for _, verb := range verbs {
@@ -171,6 +221,9 @@ func TestMiddleware(t *testing.T) {
 		path        string = "/foo/BAR/baz/QUX"
 		pattern     string = "/foo/{bar}/baz/{qux}"
 		state       map[string]interface{}
+		stateOne    = "one"
+		stateTwo    = "two"
+		stateNil    = "nope"
 	)
 	params = map[string]string{"bar": "BAR", "qux": "QUX"}
 	state = map[string]interface{}{"one": 1, "two": 2}
@@ -182,6 +235,10 @@ func TestMiddleware(t *testing.T) {
 		)
 		one := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++
+			if ctx.Get(stateNil) != nil {
+				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
+					ctx.Get(stateNil), nil)
+			}
 			ctx.Set("one", 1)
 			ctx.Next(res, req)
 		}
@@ -200,6 +257,14 @@ func TestMiddleware(t *testing.T) {
 				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
 					ctx.state, state)
 			}
+			if ctx.Get(stateOne) != state[stateOne] {
+				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
+					ctx.Get(stateOne), state[stateOne])
+			}
+			if ctx.Get(stateTwo) != state[stateTwo] {
+				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
+					ctx.Get(stateTwo), state[stateTwo])
+			}
 		}
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
@@ -214,78 +279,55 @@ func TestMiddleware(t *testing.T) {
 		run(verb)
 	}
 }
-func TestMiddlewareRejection(t *testing.T) {
+func TestMiddlewareRejectionOne(t *testing.T) {
+	mux := New()
+	one := func(http.ResponseWriter, *http.Request, *Context) {}
+	two := func(http.ResponseWriter, *http.Request) {}
+	last := func(http.ResponseWriter, *http.Request, *Context) {}
+	if err := mux.On("*", "*", one, two, last); err == nil {
+		t.Errorf("middleware with wrong signature was accepted")
+	}
+}
+func TestMiddlewareRejectionTwo(t *testing.T) {
+	mux := New()
+	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	two := HandlerFunc(func(http.ResponseWriter, *http.Request, *Context) {})
+	last := HandlerFunc(func(http.ResponseWriter, *http.Request, *Context) {})
+	if err := mux.On("*", "*", one, two, last); err == nil {
+		t.Errorf("middleware with wrong signature was accepted")
+	}
+}
+func TestMiddlewareRejectionThree(t *testing.T) {
+	mux := New()
+	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	two := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	if err := mux.On("*", "*", one, two); err == nil {
+		t.Errorf("middleware with wrong signature was accepted")
+	}
+}
+func TestMiddlewareRejectionFour(t *testing.T) {
+	mux := New()
+	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
+	two := func(http.ResponseWriter, *http.Request) {}
+	if err := mux.On("*", "*", one, two); err == nil {
+		t.Errorf("middleware with wrong signature was accepted")
+	}
+}
+func TestNoHandlers(t *testing.T) {
 	var (
-		mux     *Mux   = New()
-		path    string = "/foo/BAR/baz/QUX"
-		pattern string = "/foo/{bar}/baz/{qux}"
+		mux  *Mux   = New()
+		path string = "/foo/bar"
+		req  *http.Request
+		res  *httptest.ResponseRecorder
+		want int = http.StatusNotFound
 	)
-	run := func(method string) {
-		one := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
-			ctx.Next(res, req)
+	for _, verb := range verbs {
+		req, _ = http.NewRequest(verb, path, nil)
+		res = httptest.NewRecorder()
+		mux.ServeHTTP(res, req)
+		if res.Code != want {
+			t.Errorf("%s %s got %d want %d", verb, path, res.Code, want)
 		}
-		two := func(_ http.ResponseWriter, _ *http.Request) {}
-		last := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {}
-		err := mux.On(method, pattern, one, two, last)
-		if err == nil {
-			t.Errorf("%s %s (%s) middleware with wrong signature was accepted",
-				method, path, pattern)
-		}
-	}
-	for _, verb := range verbs {
-		run(verb)
-	}
-}
-func TestOKNoParams(t *testing.T) {
-	var (
-		path    string = "/foo/bar"
-		pattern string = "/foo/bar"
-		want    int    = http.StatusOK
-	)
-	for _, verb := range verbs {
-		simpleHttpTest("http.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleHttpAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleBearTest("bear.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleBearAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, want)(t)
-	}
-}
-func TestOKParams(t *testing.T) {
-	var (
-		path    string = "/foo/BAR/baz/QUX"
-		pattern string = "/foo/{bar}/baz/{qux}"
-		want    map[string]string
-	)
-	want = map[string]string{"bar": "BAR", "qux": "QUX"}
-	for _, verb := range verbs {
-		simpleHttpTest("http.HandlerFunc",
-			verb, path, pattern, http.StatusOK)(t)
-		simpleHttpAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, http.StatusOK)(t)
-		paramBearTest("bear.HandlerFunc",
-			verb, path, pattern, want)(t)
-		paramBearAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, want)(t)
-	}
-}
-func TestOKRoot(t *testing.T) {
-	var (
-		path    string = "/"
-		pattern string = "/"
-		want    int    = http.StatusOK
-	)
-	for _, verb := range verbs {
-		simpleHttpTest("http.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleHttpAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleBearTest("bear.HandlerFunc",
-			verb, path, pattern, want)(t)
-		simpleBearAnonTest("anonymous http.HandlerFunc",
-			verb, path, pattern, want)(t)
 	}
 }
 func TestNotFoundCustom(t *testing.T) {
@@ -362,6 +404,126 @@ func TestNotFoundParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+func TestNotFoundWild(t *testing.T) {
+	var (
+		path    string = "/foo"
+		pattern string = "/foo/*"
+		want    int    = http.StatusNotFound
+	)
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
+func TestNotFoundRoot(t *testing.T) {
+	var (
+		method string = "GET"
+		mux    *Mux   = New()
+		path   string = "/"
+		req    *http.Request
+		res    *httptest.ResponseRecorder
+		want   int = http.StatusNotFound
+	)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+	if res.Code != want {
+		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
+	}
+}
+func TestOKNoParams(t *testing.T) {
+	var (
+		path    string = "/foo/bar"
+		pattern string = "/foo/bar"
+		want    int    = http.StatusOK
+	)
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
+func TestOKParams(t *testing.T) {
+	var (
+		path    string = "/foo/BAR/baz/QUX"
+		pattern string = "/foo/{bar}/baz/{qux}"
+		want    map[string]string
+	)
+	want = map[string]string{"bar": "BAR", "qux": "QUX"}
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, http.StatusOK)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, http.StatusOK)(t)
+		paramBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		paramBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
+func TestOKParamsTrailingSlash(t *testing.T) {
+	var (
+		path    string = "/foo/BAR/baz/QUX/"
+		pattern string = "/foo/{bar}/baz/{qux}"
+		want    map[string]string
+	)
+	want = map[string]string{"bar": "BAR", "qux": "QUX"}
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, http.StatusOK)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, http.StatusOK)(t)
+		paramBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		paramBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
+func TestOKRoot(t *testing.T) {
+	var (
+		path    string = "/"
+		pattern string = "/"
+		want    int    = http.StatusOK
+	)
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
+func TestOKWildRoot(t *testing.T) {
+	var (
+		path    string = "/"
+		pattern string = "*"
+		want    int    = http.StatusOK
+	)
+	for _, verb := range verbs {
+		simpleHttpTest("http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleHttpAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearTest("bear.HandlerFunc",
+			verb, path, pattern, want)(t)
+		simpleBearAnonTest("anonymous http.HandlerFunc",
+			verb, path, pattern, want)(t)
+	}
+}
 func TestSanitizePatternPrefixSuffix(t *testing.T) {
 	var (
 		method  string = "GET"
@@ -404,6 +566,16 @@ func TestSanitizePatternDoubleSlash(t *testing.T) {
 	mux.ServeHTTP(res, req)
 	if body := res.Body.String(); body != want {
 		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
+	}
+}
+func TestUnreachable(t *testing.T) {
+	mux := New()
+	one := func(http.ResponseWriter, *http.Request, *Context) {}
+	two := func(http.ResponseWriter, *http.Request) {}
+	three := func(http.ResponseWriter, *http.Request, *Context) {}
+	err := mux.On("*", "*", one, two, three)
+	if nil == err {
+		t.Errorf("unreachable 1")
 	}
 }
 func TestWildcardCompeting(t *testing.T) {
@@ -451,18 +623,6 @@ func TestWildcardCompeting(t *testing.T) {
 			method, pathThree, patternThree, body, wantThree)
 	}
 }
-func TestWildcardNotLast(t *testing.T) {
-	var (
-		mux     *Mux   = New()
-		pattern string = "/foo/*/bar"
-	)
-	handler := func(res http.ResponseWriter, req *http.Request) {}
-	err := mux.On("*", pattern, handler)
-	if err == nil {
-		t.Errorf("wildcard pattern (%s) with non-final wildcard was accepted",
-			pattern)
-	}
-}
 func TestWildcardMethod(t *testing.T) {
 	var (
 		mux     *Mux   = New()
@@ -481,6 +641,18 @@ func TestWildcardMethod(t *testing.T) {
 			t.Errorf("%s %s (%s) got %d want %d",
 				verb, path, pattern, res.Code, want)
 		}
+	}
+}
+func TestWildcardNotLast(t *testing.T) {
+	var (
+		mux     *Mux   = New()
+		pattern string = "/foo/*/bar"
+	)
+	handler := func(res http.ResponseWriter, req *http.Request) {}
+	err := mux.On("*", pattern, handler)
+	if err == nil {
+		t.Errorf("wildcard pattern (%s) with non-final wildcard was accepted",
+			pattern)
 	}
 }
 func TestWildcardParams(t *testing.T) {
