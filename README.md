@@ -1,5 +1,6 @@
 # *b*ear: *e*mbeddable *a*pplication *r*outer
 [![Build Status](https://drone.io/github.com/ursiform/bear/status.png)](https://drone.io/github.com/ursiform/bear/latest)
+
 [![Coverage Status](https://coveralls.io/repos/ursiform/bear/badge.svg)](https://coveralls.io/r/ursiform/bear)
 
 [`bear.Mux`](#type-mux) is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
