@@ -279,7 +279,7 @@ func TestMiddleware(t *testing.T) {
 		run(verb)
 	}
 }
-func TestMiddlewareRejectionOne(t *testing.T) {
+func TestMiddlewareRejectionA(t *testing.T) {
 	mux := New()
 	one := func(http.ResponseWriter, *http.Request, *Context) {}
 	two := func(http.ResponseWriter, *http.Request) {}
@@ -288,7 +288,7 @@ func TestMiddlewareRejectionOne(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
-func TestMiddlewareRejectionTwo(t *testing.T) {
+func TestMiddlewareRejectionB(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	two := HandlerFunc(func(http.ResponseWriter, *http.Request, *Context) {})
@@ -297,7 +297,7 @@ func TestMiddlewareRejectionTwo(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
-func TestMiddlewareRejectionThree(t *testing.T) {
+func TestMiddlewareRejectionC(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	two := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
@@ -305,7 +305,7 @@ func TestMiddlewareRejectionThree(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
-func TestMiddlewareRejectionFour(t *testing.T) {
+func TestMiddlewareRejectionD(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	two := func(http.ResponseWriter, *http.Request) {}
@@ -420,7 +420,7 @@ func TestNotFoundRoot(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
-func TestNotFoundWild(t *testing.T) {
+func TestNotFoundWildA(t *testing.T) {
 	var (
 		path    string = "/foo"
 		pattern string = "/foo/*"
@@ -437,7 +437,7 @@ func TestNotFoundWild(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
-func TestNotFoundWildTwo(t *testing.T) {
+func TestNotFoundWildB(t *testing.T) {
 	var (
 		method     string = "GET"
 		mux        *Mux   = New()
