@@ -1,4 +1,7 @@
 # *b*ear: *e*mbeddable *a*pplication *r*outer
+[![Build Status](https://drone.io/github.com/ursiform/bear/status.png)](https://drone.io/github.com/ursiform/bear/latest)
+[![Coverage Status](https://coveralls.io/repos/ursiform/bear/badge.svg)](https://coveralls.io/r/ursiform/bear)
+
 [`bear.Mux`](#type-mux) is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
 and accepts both native [`http.HandlerFunc`](http://golang.org/pkg/net/http/#HandlerFunc) or [`bear.HandlerFunc`](#type-handlerfunc), which accepts an extra [`*Context`](#type-context) argument
 that allows storing state (using the [`Get()`](#func-context-get) and [`Set()`](#func-context-set) methods) and calling the [`Next()`](#func-context-next) middleware.
