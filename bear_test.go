@@ -685,6 +685,20 @@ func TestWildcardMethod(t *testing.T) {
 		}
 	}
 }
+func TestWildcardMethodWarning(t *testing.T) {
+	var (
+		mux     *Mux   = New()
+		pattern string = "/foo/bar/"
+		verb    string = "GET"
+	)
+	handler := func(http.ResponseWriter, *http.Request, *Context) {}
+	if err := mux.On(verb, pattern, handler); err != nil {
+		t.Errorf("%s %s should have registered", verb, pattern)
+	}
+	if err := mux.On("*", pattern, handler); err == nil {
+		t.Errorf("* %s should have registered, but with an error", pattern)
+	}
+}
 func TestWildcardNotLast(t *testing.T) {
 	var (
 		mux     *Mux   = New()

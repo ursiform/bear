@@ -43,7 +43,22 @@ it is not middleware.
 
 It returns an error if it fails, but does not panic. Verb strings are
 uppercase HTTP methods. There is a special verb "*" which can be used to
-answer *all* HTTP methods.
+answer *all* HTTP methods. It is not uncommon for the verb "*" to return errors,
+because a path may already have a listener associated with one HTTP verb before
+the "*" verb is called. For example, this common and useful pattern will return
+an error that can safely be ignored:
+
+handlerOne := func(http.ResponseWriter, *http.Request) {}
+
+handlerTwo := func(http.ResponseWriter, *http.Request) {}
+
+if err := mux.On("GET", "/foo/", handlerOne); err != nil {
+    println(err.Error())
+} // prints nothing to stderr
+
+if err := mux.On("*", "/foo/", handlerTwo); err != nil {
+    println(err.Error())
+} // prints "bear: GET /foo/ exists, ignoring" to stderr
 
 Pattern strings are composed of tokens that are separated by "/" characters.
 There are three kinds of tokens:
@@ -72,12 +87,17 @@ handler exists.
 */
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 	if verb == asterisk {
+		errors := []string{}
 		for _, verb := range verbs {
 			if err := mux.On(verb, pattern, handlers...); err != nil {
-				return err
+				errors = append(errors, err.Error())
 			}
 		}
-		return nil
+		if 0 == len(errors) {
+			return nil
+		} else {
+			return fmt.Errorf(strings.Join(errors, "\n"))
+		}
 	}
 	tr, wildcards := mux.tree(verb)
 	if nil == tr {
