@@ -46,11 +46,13 @@ func (ctx *Context) param(key string, value string, capacity int) {
 
 // Set allows setting an arbitrary value (interface{}) to a string key
 // to allow one middleware to pass information to the next.
-func (ctx *Context) Set(key string, value interface{}) {
+// It returns a pointer to the current Context to allow chaining.
+func (ctx *Context) Set(key string, value interface{}) *Context {
 	if nil == ctx.state {
 		ctx.state = make(map[string]interface{})
 	}
 	ctx.state[key] = value
+	return ctx
 }
 
 // Pattern returns the URL pattern that a request matched.

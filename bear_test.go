@@ -239,13 +239,11 @@ func TestMiddleware(t *testing.T) {
 				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
 					ctx.Get(stateNil), nil)
 			}
-			ctx.Set("one", 1)
-			ctx.Next(res, req)
+			ctx.Set("one", 1).Next(res, req)
 		}
 		two := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++
-			ctx.Set("two", 2)
-			ctx.Next(res, req)
+			ctx.Set("two", 2).Next(res, req)
 		}
 		last := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
 			visited++

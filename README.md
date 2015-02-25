@@ -32,8 +32,7 @@ func one(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     ctx.Next(res, req)
 }
 func two(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.Set("two", "set in func two")
-    ctx.Next(res, req)
+    ctx.Set("two", "set in func two").Next(res, req) // ctx.Set() allows chaining
 }
 func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     var (
@@ -103,10 +102,10 @@ func (ctx *Context) Pattern() string
 #### func (*Context) Set
 
 ```go
-func (ctx *Context) Set(key string, value interface{})
+func (ctx *Context) Set(key string, value interface{}) *Context
 ```
 `Set` allows setting an arbitrary value (`interface{}`) to a string key to allow one
-middleware to pass information to the next.
+middleware to pass information to the next. It returns a pointer to the current `Context` to allow chaining.
 
 #### type HandlerFunc
 
