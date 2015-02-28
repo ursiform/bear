@@ -28,26 +28,23 @@ func notfound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Write([]byte("Sorry, not found!\n"))
 }
 func one(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.Set("one", "set in func one")
-    ctx.Next(res, req)
+    ctx.Set("one", "set in func one").Next(res, req) // Set() allows chaining
 }
 func two(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.Set("two", "set in func two").Next(res, req) // ctx.Set() allows chaining
+    ctx.Set("two", "set in func two").Next(res, req)
 }
 func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    var (
-        greet  string = fmt.Sprintf("Hello, %s!\n", ctx.Params["user"])
-        first  string = ctx.Get("one").(string) // assert type: interface{} as string
-        second string = ctx.Get("two").(string) // assert type: interface{} as string
-        state  string = fmt.Sprintf("state one: %s\nstate two: %s\n", first, second)
-    )
+    greet := fmt.Sprintf("Hello, %s!\n", ctx.Params["user"])
+    first := ctx.Get("one").(string)  // assert type: interface{} as string
+    second := ctx.Get("two").(string) // assert type: interface{} as string
+    state := fmt.Sprintf("state one: %s\nstate two: %s\n", first, second)
     res.Header().Set("Content-Type", "text/plain")
     res.Write([]byte(greet + state))
 }
 func main() {
     mux := bear.New()
-    mux.On("GET", "/hello/{user}", one, two, three) // dynamic URL parameter {user}
-    mux.On("*", "/*", notfound)                     // use wildcard for custom 404
+    mux.On("GET", "/hello/{user}", one, two, three) // dynamic URL param {user}
+    mux.On("*", "/*", notfound)                     // wildcard method + path
     http.ListenAndServe(":1337", mux)
 }
 ```
