@@ -22,7 +22,7 @@ import (
     "net/http"
 )
 
-func notfound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
+func notFound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Header().Set("Content-Type", "text/plain")
     res.WriteHeader(http.StatusNotFound)
     res.Write([]byte("Sorry, not found!\n"))
@@ -44,7 +44,7 @@ func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 func main() {
     mux := bear.New()
     mux.On("GET", "/hello/{user}", one, two, three) // dynamic URL param {user}
-    mux.On("*", "/*", notfound)                     // wildcard method + path
+    mux.On("*", "/*", notFound)                     // wildcard method + path
     http.ListenAndServe(":1337", mux)
 }
 ```
