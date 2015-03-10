@@ -4,9 +4,7 @@
 
 package bear
 
-import (
-	"net/http"
-)
+import "net/http"
 
 type Context struct {
 	// Params is a map of string keys with string values that is populated
