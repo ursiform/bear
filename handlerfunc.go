@@ -24,57 +24,63 @@ func handlerize(verb string, pattern string,
 					verb, pattern)
 				return
 			}
-			if fn.(HandlerFunc) == nil {
-				err = fmt.Errorf("bear: %s %s has nil middleware", verb, pattern)
+			handler := fn.(HandlerFunc)
+			if handler == nil {
+				err = fmt.Errorf("bear: %s %s has nil middleware",
+					verb, pattern)
 				return
+			} else {
+				handlers = append(handlers, HandlerFunc(handler))
 			}
-			handlers = append(handlers, HandlerFunc(fn.(HandlerFunc)))
 		case func(http.ResponseWriter, *http.Request, *Context):
 			if unreachable {
 				err = fmt.Errorf("bear: %s %s has unreachable middleware",
 					verb, pattern)
 				return
 			}
-			if fn.(func(http.ResponseWriter, *http.Request, *Context)) == nil {
+			handler := fn.(func(http.ResponseWriter, *http.Request, *Context))
+			if handler == nil {
 				err = fmt.Errorf("bear: %s %s has nil middleware", verb, pattern)
 				return
+			} else {
+				handlers = append(handlers, HandlerFunc(handler))
 			}
-			handlers = append(handlers, HandlerFunc(
-				fn.(func(http.ResponseWriter, *http.Request, *Context))))
 		case http.HandlerFunc:
 			if unreachable {
 				err = fmt.Errorf("bear: %s %s has unreachable middleware",
 					verb, pattern)
 				return
 			}
-			if fn.(http.HandlerFunc) == nil {
+			handler := fn.(http.HandlerFunc)
+			if handler == nil {
 				err = fmt.Errorf("bear: %s %s has nil middleware", verb, pattern)
 				return
+			} else {
+				// after non HandlerFunc handlers other handlers are unreachable
+				unreachable = true
+				handlers = append(handlers, HandlerFunc(func(
+					res http.ResponseWriter, req *http.Request, _ *Context) {
+					handler(res, req)
+				}))
 			}
-			// after non HandlerFunc handlers, other handlers are unreachable
-			unreachable = true
-			handler := fn.(http.HandlerFunc)
-			handlers = append(handlers, HandlerFunc(func(
-				res http.ResponseWriter, req *http.Request, _ *Context) {
-				handler(res, req)
-			}))
 		case func(http.ResponseWriter, *http.Request):
 			if unreachable {
 				err = fmt.Errorf("bear: %s %s has unreachable middleware",
 					verb, pattern)
 				return
 			}
-			if fn.(func(http.ResponseWriter, *http.Request)) == nil {
+			handler := fn.(func(http.ResponseWriter, *http.Request))
+			if handler == nil {
 				err = fmt.Errorf("bear: %s %s has nil middleware", verb, pattern)
 				return
+			} else {
+				// after non HandlerFunc handlers other handlers are unreachable
+				unreachable = true
+				handlers = append(handlers, HandlerFunc(func(
+					res http.ResponseWriter, req *http.Request, _ *Context) {
+					handler(res, req)
+				}))
 			}
-			// after non HandlerFunc handlers, other handlers are unreachable
-			unreachable = true
-			handler := fn.(func(http.ResponseWriter, *http.Request))
-			handlers = append(handlers, HandlerFunc(func(
-				res http.ResponseWriter, req *http.Request, _ *Context) {
-				handler(res, req)
-			}))
 		default:
 			err = fmt.Errorf(
 				"bear: handler must match http.HandlerFunc OR bear.HandlerFunc")
