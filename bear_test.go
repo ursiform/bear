@@ -311,6 +311,27 @@ func TestMiddlewareRejectionD(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
+func TestMiddlewareRejectionE(t *testing.T) {
+	mux := New()
+	var (
+		one   HandlerFunc
+		two   http.HandlerFunc
+		three func(http.ResponseWriter, *http.Request)
+		four  func(http.ResponseWriter, *http.Request, *Context)
+	)
+	if err := mux.On("GET", "/", one); err == nil {
+		t.Errorf("nil middleware was accepted")
+	}
+	if err := mux.On("GET", "/", two); err == nil {
+		t.Errorf("nil middleware was accepted")
+	}
+	if err := mux.On("GET", "/", three); err == nil {
+		t.Errorf("nil middleware was accepted")
+	}
+	if err := mux.On("GET", "/", four); err == nil {
+		t.Errorf("nil middleware was accepted")
+	}
+}
 func TestNoHandlers(t *testing.T) {
 	var (
 		mux  *Mux   = New()
