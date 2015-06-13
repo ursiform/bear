@@ -11,8 +11,9 @@ import (
 )
 
 type Mux struct {
-	trees [8]*tree // pointers to a tree for each HTTP verb
-	wild  [8]bool  // true if a tree has a wildcard (requires back-references)
+	trees  [8]*tree      // pointers to a tree for each HTTP verb
+	always []HandlerFunc // list of handlers that run for all requests
+	wild   [8]bool       // true if a tree has a wildcard (requires back-references)
 }
 
 func parsePath(s string) (components []string, last int) {
@@ -32,6 +33,24 @@ func parsePath(s string) (components []string, last int) {
 		components[last] = components[last] + slash
 	}
 	return components, last
+}
+
+/*
+Always adds one or more handlers that will run before every single request.
+Multiple calls to Always will append the current list of Always handlers with
+the newly added handlers.
+
+Handlers must be either bear.HandlerFunc functions or functions that match
+the bear.HandlerFunc signature and they should call (*Context).Next to
+continue the response life cycle.
+*/
+func (mux *Mux) Always(handlers ...interface{}) error {
+	if functions, err := handlerizeStrict(handlers); err != nil {
+		return err
+	} else {
+		mux.always = append(mux.always, functions...)
+		return err
+	}
 }
 
 /*
@@ -103,10 +122,10 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 	if nil == tr {
 		return fmt.Errorf("bear: %s isn't a valid HTTP verb", verb)
 	}
-	if fns, err := handlerize(verb, pattern, handlers); err != nil {
+	if functions, err := handlerizeLax(verb, pattern, handlers); err != nil {
 		return err
 	} else {
-		tr.set(verb, pattern, fns, wildcards, &err)
+		tr.set(verb, pattern, functions, wildcards, &err)
 		return err
 	}
 }
@@ -121,11 +140,11 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// root is a special case because it is the top node in the tree
 	if req.URL.Path == slash || req.URL.Path == empty {
 		if nil != tr.handlers { // root match
-			tr.handlers[0](res, req, &Context{tree: tr})
+			(&Context{handler: -1, mux: mux, tree: tr}).Next(res, req)
 			return
 		} else if wild := tr.children[wildcard]; nil != wild {
 			// root level wildcard pattern match
-			wild.handlers[0](res, req, &Context{tree: wild})
+			(&Context{handler: -1, mux: mux, tree: wild}).Next(res, req)
 			return
 		}
 		http.NotFound(res, req)
@@ -134,7 +153,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	var key string
 	components, last := parsePath(req.URL.Path)
 	capacity := last + 1 // maximum number of params possible for this request
-	context := new(Context)
+	context := &Context{handler: -1, mux: mux}
 	current := &tr.children
 	if !*wildcards { // no wildcards: simpler, slightly faster
 		for index, component := range components {
@@ -156,7 +175,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 					http.NotFound(res, req)
 				} else {
 					context.tree = (*current)[key]
-					context.tree.handlers[0](res, req, context)
+					context.Next(res, req)
 				}
 				return
 			}
@@ -172,7 +191,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 						http.NotFound(res, req)
 					} else { // wildcard pattern match
 						context.tree = wild
-						wild.handlers[0](res, req, context)
+						context.Next(res, req)
 					}
 					return
 				} else {
@@ -187,7 +206,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 						context.param((*current)[key].name, component, capacity)
 					} else { // wildcard pattern match
 						context.tree = wild
-						wild.handlers[0](res, req, context)
+						context.Next(res, req)
 						return
 					}
 				}
@@ -197,7 +216,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 					http.NotFound(res, req)
 				} else { // non-wildcard pattern match
 					context.tree = (*current)[key]
-					context.tree.handlers[0](res, req, context)
+					context.Next(res, req)
 				}
 				return
 			}
@@ -236,11 +255,13 @@ func (mux *Mux) tree(name string) (*tree, *bool) {
 
 // New returns a pointer to a bear Mux multiplexer
 func New() *Mux {
-	return &Mux{
-		[8]*tree{
-			&tree{}, &tree{}, &tree{}, &tree{},
-			&tree{}, &tree{}, &tree{}, &tree{}},
-		[8]bool{
-			false, false, false, false,
-			false, false, false, false}}
+	mux := new(Mux)
+	mux.trees = [8]*tree{
+		&tree{}, &tree{}, &tree{}, &tree{},
+		&tree{}, &tree{}, &tree{}, &tree{}}
+	mux.wild = [8]bool{
+		false, false, false, false,
+		false, false, false, false}
+	return mux
+
 }

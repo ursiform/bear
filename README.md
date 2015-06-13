@@ -18,10 +18,14 @@ package main
 
 import (
     "fmt"
+    "log"
     "github.com/ursiform/bear"
     "net/http"
 )
-
+func logRequest(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
+    log.Printf("%s %s\n", req.Method, req.URL.Path)
+    ctx.Next(res, req)
+}
 func notFound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Header().Set("Content-Type", "text/plain")
     res.WriteHeader(http.StatusNotFound)
@@ -43,6 +47,7 @@ func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 }
 func main() {
     mux := bear.New()
+    mux.Always(logRequest)                          // log each incoming request
     mux.On("GET", "/hello/{user}", one, two, three) // dynamic URL param {user}
     mux.On("*", "/*", notFound)                     // wildcard method + path
     http.ListenAndServe(":1337", mux)
@@ -127,6 +132,17 @@ type Mux struct {
 func New() *Mux
 ```
 `New` returns a reference to a bear `Mux` multiplexer
+
+```go
+func (mux *Mux) Always(handlers ...interface{}) error
+```
+`Always` adds one or more handlers that will run before every single request.
+Multiple calls to `Always` will append the current list of `Always` handlers
+with the newly added handlers.
+
+Handlers must be either `bear.HandlerFunc` functions or functions that match the
+`bear.HandlerFunc` signature and they should call `(*Context).Next` to continue
+the response life cycle.
 
 #### func (*Mux) On
 

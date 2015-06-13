@@ -11,8 +11,9 @@ type Context struct {
 	// by the dynamic URL parameters (if any).
 	// Wildcard params are accessed by using an asterisk: Params["*"]
 	Params  map[string]string
-	state   map[string]interface{}
 	handler int
+	mux     *Mux
+	state   map[string]interface{}
 	tree    *tree
 }
 
@@ -28,10 +29,15 @@ func (ctx *Context) Get(key string) interface{} {
 // Next calls the next middleware (if any) that was registered as a handler for
 // a particular request pattern.
 func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
+	always := len(ctx.mux.always)
 	handlers := len(ctx.tree.handlers)
 	ctx.handler++
-	if handlers > ctx.handler {
-		ctx.tree.handlers[ctx.handler](res, req, ctx)
+	if always > 0 && ctx.handler < always {
+		ctx.mux.always[ctx.handler](res, req, ctx)
+		return
+	}
+	if ctx.handler-always < handlers {
+		ctx.tree.handlers[ctx.handler-always](res, req, ctx)
 	}
 }
 

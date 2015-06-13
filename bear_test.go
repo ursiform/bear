@@ -752,3 +752,57 @@ func TestWildcardParams(t *testing.T) {
 		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
 	}
 }
+func TestAlways(t *testing.T) {
+	var (
+		mux      *Mux = New()
+		pattern       = "/foo"
+		method        = "GET"
+		path          = "/foo"
+		req      *http.Request
+		res      *httptest.ResponseRecorder
+		keyOne   = "one"
+		stateOne = 1
+		keyTwo   = "two"
+		stateTwo = 2
+	)
+	one := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		ctx.Set(keyOne, stateOne).Next(res, req)
+	}
+	two := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		ctx.Set(keyTwo, stateTwo).Next(res, req)
+	}
+	three := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		first := reflect.DeepEqual(ctx.Get(keyOne), stateOne)
+		second := reflect.DeepEqual(ctx.Get(keyTwo), stateTwo)
+		if !first || !second {
+			t.Errorf("Always middlewares did not execute before On middleware")
+		}
+	}
+	mux.Always(one)
+	mux.Always(HandlerFunc(two))
+	mux.On(method, pattern, three)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+}
+func TestAlwaysRejection(t *testing.T) {
+	var (
+		mux   *Mux = New()
+		one   HandlerFunc
+		two   http.HandlerFunc
+		three func(http.ResponseWriter, *http.Request)
+		four  func(http.ResponseWriter, *http.Request, *Context)
+	)
+	if err := mux.Always(one); err == nil {
+		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+	}
+	if err := mux.Always(two); err == nil {
+		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+	}
+	if err := mux.Always(three); err == nil {
+		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+	}
+	if err := mux.Always(four); err == nil {
+		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+	}
+}
