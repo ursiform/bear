@@ -785,6 +785,37 @@ func TestAlways(t *testing.T) {
 	res = httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
 }
+
+func TestAlwaysBeforeNotFound(t *testing.T) {
+	var (
+		mux      *Mux = New()
+		pattern       = "/foo"
+		method        = "GET"
+		path          = "/bar"
+		req      *http.Request
+		res      *httptest.ResponseRecorder
+		keyOne   = "one"
+		stateOne = 1
+	)
+	always := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		ctx.Set(keyOne, stateOne).Next(res, req)
+	}
+	handler := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		t.Errorf("handler should not be fired because path != pattern")
+	}
+	notFound := func(res http.ResponseWriter, req *http.Request, ctx *Context) {
+		first := reflect.DeepEqual(ctx.Get(keyOne), stateOne)
+		if !first {
+			t.Errorf("Always middleware did not execute before notFound")
+		}
+	}
+	mux.Always(always)
+	mux.On(method, pattern, handler)
+	mux.On("*", "/*", notFound)
+	req, _ = http.NewRequest(method, path, nil)
+	res = httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+}
 func TestAlwaysRejection(t *testing.T) {
 	var (
 		mux   *Mux = New()
