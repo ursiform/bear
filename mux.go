@@ -10,6 +10,13 @@ import (
 	"strings"
 )
 
+/*
+Mux is an HTTP multiplexer. It uses a tree structure for fast routing,
+supports dynamic parameters, middleware, and accepts both native
+http.HandlerFunc or bear.HandlerFunc, which accepts an extra *Context argument
+that allows storing state (using the Get() and Set() methods) and calling the
+Next() middleware.
+*/
 type Mux struct {
 	trees  [8]*tree      // pointers to a tree for each HTTP verb
 	always []HandlerFunc // list of handlers that run for all requests
@@ -65,7 +72,7 @@ uppercase HTTP methods. There is a special verb "*" which can be used to
 answer *all* HTTP methods. It is not uncommon for the verb "*" to return errors,
 because a path may already have a listener associated with one HTTP verb before
 the "*" verb is called. For example, this common and useful pattern will return
-an error that can safely be ignored.
+an error that can safely be ignored (see error example).
 
 Pattern strings are composed of tokens that are separated by "/" characters.
 There are three kinds of tokens:
@@ -241,7 +248,7 @@ func (mux *Mux) tree(name string) (*tree, *bool) {
 	}
 }
 
-// New returns a pointer to a bear Mux multiplexer
+// New returns a pointer to a Mux instance
 func New() *Mux {
 	mux := new(Mux)
 	mux.trees = [8]*tree{

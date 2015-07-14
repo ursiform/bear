@@ -3,11 +3,8 @@
 // that can be found in the LICENSE file.
 
 /*
-bear.Mux is an HTTP multiplexer. It uses a tree structure for fast routing,
-supports dynamic parameters, middleware, and accepts both native
-http.HandlerFunc or bear.HandlerFunc, which accepts an extra *Context argument
-that allows storing state (using the Get() and Set() methods) and calling the
-Next() middleware.
+Package bear provides HTTP multiplexing with dynamic URL components and request
+contexts to form the nucleus of a middleware-based web service.
 */
 package bear
 
