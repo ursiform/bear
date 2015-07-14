@@ -1,11 +1,12 @@
 # *b*ear: *e*mbeddable *a*pplication *r*outer
-[![Build Status](https://drone.io/github.com/ursiform/bear/status.png)](https://drone.io/github.com/ursiform/bear/latest)
 
-[![Coverage Status](https://coveralls.io/repos/ursiform/bear/badge.svg)](https://coveralls.io/r/ursiform/bear)
+[![Coverage status](https://coveralls.io/repos/ursiform/bear/badge.svg)](https://coveralls.io/r/ursiform/bear)
+
+[![API documentation](https://godoc.org/github.com/ursiform/bear?status.svg)](https://godoc.org/github.com/ursiform/bear)
 
 [`bear.Mux`](#type-mux) is an HTTP multiplexer. It uses a tree structure for fast routing, supports dynamic parameters, middleware,
-and accepts both native [`http.HandlerFunc`](http://golang.org/pkg/net/http/#HandlerFunc) or [`bear.HandlerFunc`](#type-handlerfunc), which accepts an extra [`*Context`](#type-context) argument
-that allows storing state (using the [`Get()`](#func-context-get) and [`Set()`](#func-context-set) methods) and calling the [`Next()`](#func-context-next) middleware.
+and accepts both native [`http.HandlerFunc`](http://golang.org/pkg/net/http/#HandlerFunc) or [`bear.HandlerFunc`](https://godoc.org/github.com/ursiform/bear#HandlerFunc), which accepts an extra [`*Context`](https://godoc.org/github.com/ursiform/bear#Context) argument
+that allows storing state (using the [`Get()`](https://godoc.org/github.com/ursiform/bear#Context.Get) and [`Set()`](https://godoc.org/github.com/ursiform/bear#Context.Set) methods) and calling the [`Next()`](https://godoc.org/github.com/ursiform/bear#Context.Next) middleware.
 
 ## Install
 ```
@@ -68,138 +69,7 @@ Sorry, not found!
 
 ## API
 
-#### type Context
-
-```go
-type Context struct {
-    // Params is a map of string keys with string values that is populated
-    // by the dynamic URL parameters (if any).
-    // Wildcard params are accessed by using an asterisk: Params["*"]
-    Params map[string]string
-}
-```
-
-#### func (*Context) Get
-
-```go
-func (ctx *Context) Get(key string) interface{}
-```
-`Get` allows retrieving a state value (`interface{}`)
-
-#### func (*Context) Next
-
-```go
-func (ctx *Context) Next(res http.ResponseWriter, req *http.Request)
-```
-`Next` calls the next middleware (if any) that was registered as a handler for a
-particular request pattern.
-
-#### func (*Context) Pattern
-
-```go
-func (ctx *Context) Pattern() string
-```
-`Pattern` returns the URL pattern that a request matched.
-
-#### func (*Context) Set
-
-```go
-func (ctx *Context) Set(key string, value interface{}) *Context
-```
-`Set` allows setting an arbitrary value (`interface{}`) to a string key to allow one
-middleware to pass information to the next. It returns a pointer to the current `Context` to allow chaining.
-
-#### type HandlerFunc
-
-```go
-type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
-```
-
-`HandlerFunc` is similar to `http.HandlerFunc`, except it requires an extra
-argument for the `*Context` of a request
-
-#### type Mux
-
-```go
-type Mux struct {
-}
-```
-
-
-#### func New
-
-```go
-func New() *Mux
-```
-`New` returns a reference to a bear `Mux` multiplexer
-
-```go
-func (mux *Mux) Always(handlers ...interface{}) error
-```
-`Always` adds one or more handlers that will run before every single request.
-Multiple calls to `Always` will append the current list of `Always` handlers
-with the newly added handlers.
-
-Handlers must be either `bear.HandlerFunc` functions or functions that match the
-`bear.HandlerFunc` signature and they should call `(*Context).Next` to continue
-the response life cycle.
-
-#### func (*Mux) On
-
-```go
-func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error
-```
-`On` adds HTTP verb handler(s) for a URL pattern. The handler argument(s) should
-either be `http.HandlerFunc` or `bear.HandlerFunc` or conform to the signature
-of one of those two. NOTE: if `http.HandlerFunc` (or a function conforming to
-its signature) is used no other handlers can *follow* it, i.e. it is not
-middleware.
-
-It returns an error if it fails, but does not panic. Verb strings are
-uppercase HTTP methods. There is a special verb `"*"` which can be used to
-answer *all* HTTP methods. It is not uncommon for the verb `"*"` to return
-errors, because a path may already have a listener associated with one HTTP verb
-before the `"*"` verb is called. For example, this common and useful pattern
-will return an error that can safely be ignored:
-
-```go
-handlerOne := func(http.ResponseWriter, *http.Request) {}
-handlerTwo := func(http.ResponseWriter, *http.Request) {}
-if err := mux.On("GET", "/foo/", handlerOne); err != nil {
-    println(err.Error())
-} // prints nothing to stderr
-if err := mux.On("*", "/foo/", handlerTwo); err != nil {
-    println(err.Error())
-} // prints "bear: GET /foo/ exists, ignoring" to stderr
-```
-
-Pattern strings are composed of tokens that are separated by `"/"` characters.
-
-There are three kinds of tokens:
-
-1. static path strings: `"/foo/bar/baz/etc"`
-2. dynamically populated parameters `"/foo/{bar}/baz"` (where `"bar"` will be populated in the `*Context.Params`)
-3. wildcard tokens `"/foo/bar/*"` where `*` has to be the final token.
-
-Parsed URL params are available in handlers via the `Params` map of the `*Context`.
-
-*Notes:*
-
-* A trailing slash `/` is always implied, even when not explicit.
-* Wildcard (`*`) patterns are only matched if no other (more specific)
-pattern matches. If multiple wildcard rules match, the most specific takes
-precedence.
-* Wildcard patterns do *not* match empty strings: a request to `/foo/bar` will
-not match the pattern `"/foo/bar/*"`. The only exception to this is the root
-wildcard pattern `"/*"` which will match the request path `/` if no root
-handler exists.
-
-#### func (*Mux) ServeHTTP
-
-```go
-func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request)
-```
-`ServeHTTP` allows a `Mux` instance to conform to the `http.Handler` interface.
+[![API documentation](https://godoc.org/github.com/ursiform/bear?status.svg)](https://godoc.org/github.com/ursiform/bear)
 
 ## License
 [MIT License](LICENSE)

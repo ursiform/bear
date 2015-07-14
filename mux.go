@@ -65,19 +65,7 @@ uppercase HTTP methods. There is a special verb "*" which can be used to
 answer *all* HTTP methods. It is not uncommon for the verb "*" to return errors,
 because a path may already have a listener associated with one HTTP verb before
 the "*" verb is called. For example, this common and useful pattern will return
-an error that can safely be ignored:
-
-handlerOne := func(http.ResponseWriter, *http.Request) {}
-
-handlerTwo := func(http.ResponseWriter, *http.Request) {}
-
-if err := mux.On("GET", "/foo/", handlerOne); err != nil {
-    println(err.Error())
-} // prints nothing to stderr
-
-if err := mux.On("*", "/foo/", handlerTwo); err != nil {
-    println(err.Error())
-} // prints "bear: GET /foo/ exists, ignoring" to stderr
+an error that can safely be ignored.
 
 Pattern strings are composed of tokens that are separated by "/" characters.
 There are three kinds of tokens:
