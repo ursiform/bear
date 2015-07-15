@@ -1,3 +1,11 @@
+// Copyright 2015 Afshin Darian. All rights reserved.
+// Use of this source code is governed by The MIT License
+// that can be found in the LICENSE file.
+
+/*
+Package bear_test contains tests and examples for package bear. The goal is 100%
+code coverage.
+*/
 package bear_test
 
 import (

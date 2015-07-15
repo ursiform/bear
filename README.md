@@ -65,7 +65,7 @@ Sorry, not found!
 ```
 
 ## Test
-    go test github.com/ursiform/bear
+    go test -cover github.com/ursiform/bear
 
 ## API
 
