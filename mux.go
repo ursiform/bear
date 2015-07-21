@@ -135,11 +135,11 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// root is a special case because it is the top node in the tree
 	if req.URL.Path == slash || req.URL.Path == empty {
 		if nil != tr.handlers { // root match
-			(&Context{handler: -1, mux: mux, tree: tr}).Next(res, req)
+			(&Context{handler: -1, mux: mux, tree: tr}).Next()
 			return
 		} else if wild := tr.children[wildcard]; nil != wild {
 			// root level wildcard pattern match
-			(&Context{handler: -1, mux: mux, tree: wild}).Next(res, req)
+			(&Context{handler: -1, mux: mux, tree: wild}).Next()
 			return
 		}
 		http.NotFound(res, req)
@@ -148,7 +148,11 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	var key string
 	components, last := parsePath(req.URL.Path)
 	capacity := last + 1 // maximum number of params possible for this request
-	context := &Context{handler: -1, mux: mux}
+	context := &Context{
+		handler:        -1,
+		mux:            mux,
+		Request:        req,
+		ResponseWriter: res}
 	current := &tr.children
 	if !*wildcards { // no wildcards: simpler, slightly faster
 		for index, component := range components {
@@ -170,7 +174,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 					http.NotFound(res, req)
 				} else {
 					context.tree = (*current)[key]
-					context.Next(res, req)
+					context.Next()
 				}
 				return
 			}
@@ -186,7 +190,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 						http.NotFound(res, req)
 					} else { // wildcard pattern match
 						context.tree = wild
-						context.Next(res, req)
+						context.Next()
 					}
 					return
 				} else {
@@ -201,7 +205,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 						context.param((*current)[key].name, component, capacity)
 					} else { // wildcard pattern match
 						context.tree = wild
-						context.Next(res, req)
+						context.Next()
 						return
 					}
 				}
@@ -211,7 +215,7 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 					http.NotFound(res, req)
 				} else { // non-wildcard pattern match
 					context.tree = (*current)[key]
-					context.Next(res, req)
+					context.Next()
 				}
 				return
 			}

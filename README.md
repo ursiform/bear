@@ -25,7 +25,7 @@ import (
 )
 func logRequest(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     log.Printf("%s %s\n", req.Method, req.URL.Path)
-    ctx.Next(res, req)
+    ctx.Next()
 }
 func notFound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Header().Set("Content-Type", "text/plain")
@@ -33,10 +33,10 @@ func notFound(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     res.Write([]byte("Sorry, not found!\n"))
 }
 func one(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.Set("one", "set in func one").Next(res, req) // Set() allows chaining
+    ctx.Set("one", "set in func one").Next() // Set() allows chaining
 }
 func two(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-    ctx.Set("two", "set in func two").Next(res, req)
+    ctx.Set("two", "set in func two").Next()
 }
 func three(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     greet := fmt.Sprintf("Hello, %s!\n", ctx.Params["user"])

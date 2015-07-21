@@ -13,8 +13,14 @@ type Context struct {
 	Params  map[string]string
 	handler int
 	mux     *Mux
-	state   map[string]interface{}
-	tree    *tree
+	// Request is the same as the *http.Request that all handlers receive
+	// and is referenced in Context for convenience.
+	Request *http.Request
+	// ReponseWriter is the same as the http.ResponseWriter that all handlers
+	// receive and is referenced in Context for convenience.
+	ResponseWriter http.ResponseWriter
+	state          map[string]interface{}
+	tree           *tree
 }
 
 // Get allows retrieving a state value (interface{})
@@ -28,16 +34,18 @@ func (ctx *Context) Get(key string) interface{} {
 
 // Next calls the next middleware (if any) that was registered as a handler for
 // a particular request pattern.
-func (ctx *Context) Next(res http.ResponseWriter, req *http.Request) {
+func (ctx *Context) Next() {
 	always := len(ctx.mux.always)
 	handlers := len(ctx.tree.handlers)
 	ctx.handler++
 	if always > 0 && ctx.handler < always {
-		ctx.mux.always[ctx.handler](res, req, ctx)
+		index := ctx.handler
+		ctx.mux.always[index](ctx.ResponseWriter, ctx.Request, ctx)
 		return
 	}
 	if ctx.handler-always < handlers {
-		ctx.tree.handlers[ctx.handler-always](res, req, ctx)
+		index := ctx.handler - always
+		ctx.tree.handlers[index](ctx.ResponseWriter, ctx.Request, ctx)
 	}
 }
 

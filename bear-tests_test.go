@@ -251,11 +251,11 @@ func TestMiddleware(t *testing.T) {
 				t.Errorf("%s %s (%s) got %v want %v", method, path, pattern,
 					ctx.Get(stateNil), nil)
 			}
-			ctx.Set("one", 1).Next(res, req)
+			ctx.Set("one", 1).Next()
 		}
 		two := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 			visited++
-			ctx.Set("two", 2).Next(res, req)
+			ctx.Set("two", 2).Next()
 		}
 		last := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 			visited++
@@ -774,10 +774,10 @@ func TestAlways(t *testing.T) {
 		stateTwo = 2
 	)
 	one := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-		ctx.Set(keyOne, stateOne).Next(res, req)
+		ctx.Set(keyOne, stateOne).Next()
 	}
 	two := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-		ctx.Set(keyTwo, stateTwo).Next(res, req)
+		ctx.Set(keyTwo, stateTwo).Next()
 	}
 	three := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 		first := reflect.DeepEqual(ctx.Get(keyOne), stateOne)
@@ -806,7 +806,7 @@ func TestAlwaysBeforeNotFound(t *testing.T) {
 		stateOne = 1
 	)
 	always := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
-		ctx.Set(keyOne, stateOne).Next(res, req)
+		ctx.Set(keyOne, stateOne).Next()
 	}
 	handler := func(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
 		t.Errorf("handler should not be fired because path != pattern")
