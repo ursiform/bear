@@ -14,15 +14,17 @@ go get github.com/ursiform/bear
 ```
 
 ## Quick start
+### Create `main.go` in a new folder
 ```go
 package main
 
 import (
     "fmt"
-    "log"
     "github.com/ursiform/bear"
+    "log"
     "net/http"
 )
+
 func logRequest(res http.ResponseWriter, req *http.Request, ctx *bear.Context) {
     log.Printf("%s %s\n", req.Method, req.URL.Path)
     ctx.Next()
@@ -54,7 +56,11 @@ func main() {
     http.ListenAndServe(":1337", mux)
 }
 ```
-###To see it working:
+###Build and start a server
+```
+$ go build -o ./server && ./server
+```
+###Test using `curl`
 ```
 $ curl http://localhost:1337/hello/world
 Hello, world!
@@ -63,7 +69,11 @@ state two: set in func two
 $ curl http://localhost:1337/hello/world/foo
 Sorry, not found!
 ```
-
+###Check server log output
+```
+2016/02/06 15:19:50 GET /hello/world
+2016/02/06 15:20:00 GET /hello/world/foo
+```
 ## Test
     go test -cover github.com/ursiform/bear
 
