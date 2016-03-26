@@ -10,7 +10,7 @@ that allows storing state (using the [`Get()`](https://godoc.org/github.com/ursi
 
 ## Install
 ```
-go get github.com/ursiform/bear
+go get -u github.com/ursiform/bear
 ```
 
 ## Quick start
