@@ -2,8 +2,9 @@ package bear_test
 
 import (
 	"fmt"
-	"github.com/ursiform/bear"
 	"net/http"
+
+	"github.com/ursiform/bear"
 )
 
 func ExampleMux_On_error() {

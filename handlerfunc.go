@@ -13,11 +13,11 @@ import (
 // an extra argument for the *Context of a request.
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Context)
 
-// Handlerize takes one of handler formats that bear.Mux accepts.
-// It returns a bear.HandlerFunc, a flag indicating whether the HandlerFunc
+// handlerize takes one of handler formats that Mux accepts.
+// It returns a HandlerFunc, a flag indicating whether the HandlerFunc
 // can be follwed by other handlers, and any error that may have arisen in
 // conversion.
-func Handlerize(function interface{}) (HandlerFunc, bool, error) {
+func handlerize(function interface{}) (HandlerFunc, bool, error) {
 	followable := true
 	unfollowable := false
 	switch function.(type) {
@@ -87,7 +87,7 @@ func handlerizeLax(
 				verb, pattern)
 			return nil, err
 		}
-		if handler, followable, err := Handlerize(function); err != nil {
+		if handler, followable, err := handlerize(function); err != nil {
 			return nil, fmt.Errorf("bear: %s %s: %s", verb, pattern, err)
 		} else {
 			if !followable {

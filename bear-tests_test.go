@@ -2,45 +2,37 @@
 // Use of this source code is governed by The MIT License
 // that can be found in the LICENSE file.
 
-/*
-Package bear_test contains tests and examples for package bear. The goal is 100%
-code coverage.
-*/
-package bear_test
+package bear
 
 import (
-	"github.com/ursiform/bear"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
 )
 
-var verbs = [...]string{
-	"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
-
 type tester func(*testing.T)
 
-// Generate tests for param requests using bear.HandlerFunc.
+// Generate tests for param requests using HandlerFunc.
 func paramBearTest(
 	label string, method string, path string,
 	pattern string, want map[string]string) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
-		handler := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+		handler := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			if !reflect.DeepEqual(want, ctx.Params) {
 				t.Errorf(
 					"%s %s (%s) %s got %v want %v",
 					method, path, pattern, label, ctx.Params, want)
 			}
 		}
-		mux.On(method, pattern, bear.HandlerFunc(handler))
+		mux.On(method, pattern, HandlerFunc(handler))
 		mux.ServeHTTP(res, req)
 		if res.Code != http.StatusOK {
 			t.Errorf(
@@ -50,20 +42,20 @@ func paramBearTest(
 	}
 }
 
-// Generate tests for param requests using anonymous bear.HandlerFunc
+// Generate tests for param requests using anonymous HandlerFunc
 // compatible functions.
 func paramBearAnonTest(
 	label string, method string, path string,
 	pattern string, want map[string]string) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
-		handler := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+		handler := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			if !reflect.DeepEqual(want, ctx.Params) {
 				t.Errorf(
 					"%s %s (%s) %s got %v want %v",
@@ -80,12 +72,12 @@ func paramBearAnonTest(
 	}
 }
 
-// Generate tests for requests (i.e. no *bear.Context) using http.HandlerFunc.
+// Generate tests for requests (i.e. no *Context) using http.HandlerFunc.
 func simpleHttpTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -102,13 +94,13 @@ func simpleHttpTest(
 	}
 }
 
-// Generate tests for param AND no-param requests (i.e. no *bear.Context) using
+// Generate tests for param AND no-param requests (i.e. no *Context) using
 // anonymous http.HandlerFunc compatible func.
 func simpleHttpAnonTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -124,19 +116,19 @@ func simpleHttpAnonTest(
 	}
 }
 
-// Generate tests for simple no-param requests using bear.HandlerFunc.
+// Generate tests for simple no-param requests using HandlerFunc.
 func simpleBearTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
-		handler := func(http.ResponseWriter, *http.Request, *bear.Context) {}
-		mux.On(method, pattern, bear.HandlerFunc(handler))
+		handler := func(http.ResponseWriter, *http.Request, *Context) {}
+		mux.On(method, pattern, HandlerFunc(handler))
 		mux.ServeHTTP(res, req)
 		if res.Code != want {
 			t.Errorf(
@@ -147,18 +139,18 @@ func simpleBearTest(
 }
 
 // Generate tests for simple no-param requests using anonymous functions that
-// only accept a *bear.Context param.
+// only accept a *Context param.
 func simpleContextTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
-		handler := func(*bear.Context) {}
+		handler := func(*Context) {}
 		mux.On(method, pattern, handler)
 		mux.ServeHTTP(res, req)
 		if res.Code != want {
@@ -169,19 +161,19 @@ func simpleContextTest(
 	}
 }
 
-// Generate tests for simple no-param requests using anonymous bear.HandlerFunc
+// Generate tests for simple no-param requests using anonymous HandlerFunc
 // compatible functions.
 func simpleBearAnonTest(label string, method string, path string,
 	pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *bear.Mux = bear.New()
+			mux *Mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
 		req, _ = http.NewRequest(method, path, nil)
 		res = httptest.NewRecorder()
-		handler := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+		handler := func(http.ResponseWriter, *http.Request, *Context) {}
 		mux.On(method, pattern, handler)
 		mux.ServeHTTP(res, req)
 		if res.Code != want {
@@ -193,14 +185,14 @@ func simpleBearAnonTest(label string, method string, path string,
 }
 
 func TestBadHandler(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	handlerBad := func(res http.ResponseWriter) {}
 	if err := mux.On("*", "*", handlerBad); nil == err {
 		t.Errorf("handlerBad should not be accepted")
 	}
 }
 func TestBadVerbOn(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	verb := "BLUB"
 	handler := func(http.ResponseWriter, *http.Request) {}
 	if err := mux.On(verb, "*", handler); nil == err {
@@ -209,11 +201,11 @@ func TestBadVerbOn(t *testing.T) {
 }
 func TestBadVerbServe(t *testing.T) {
 	var (
-		method  string    = "BLUB"
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/"
-		path    string    = "/"
-		want    int       = http.StatusNotFound
+		method  string = "BLUB"
+		mux     *Mux   = New()
+		pattern string = "/"
+		path    string = "/"
+		want    int    = http.StatusNotFound
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 	)
@@ -228,12 +220,12 @@ func TestBadVerbServe(t *testing.T) {
 }
 func TestDuplicateFailure(t *testing.T) {
 	var (
-		handler bear.HandlerFunc
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/foo/{bar}"
+		handler HandlerFunc
+		mux     *Mux   = New()
+		pattern string = "/foo/{bar}"
 	)
-	handler = bear.HandlerFunc(
-		func(http.ResponseWriter, *http.Request, *bear.Context) {})
+	handler = HandlerFunc(
+		func(http.ResponseWriter, *http.Request, *Context) {})
 	for _, verb := range verbs {
 		if err := mux.On(verb, pattern, handler); err != nil {
 			t.Error(err)
@@ -246,12 +238,12 @@ func TestDuplicateFailure(t *testing.T) {
 }
 func TestDuplicateFailureRoot(t *testing.T) {
 	var (
-		handler bear.HandlerFunc
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/"
+		handler HandlerFunc
+		mux     *Mux   = New()
+		pattern string = "/"
 	)
-	handler = bear.HandlerFunc(
-		func(http.ResponseWriter, *http.Request, *bear.Context) {})
+	handler = HandlerFunc(
+		func(http.ResponseWriter, *http.Request, *Context) {})
 	for _, verb := range verbs {
 		if err := mux.On(verb, pattern, handler); err != nil {
 			t.Error(err)
@@ -264,8 +256,8 @@ func TestDuplicateFailureRoot(t *testing.T) {
 }
 func TestMiddleware(t *testing.T) {
 	var (
-		middlewares int       = 4
-		mux         *bear.Mux = bear.New()
+		middlewares int  = 4
+		mux         *Mux = New()
 		params      map[string]string
 		path        string = "/foo/BAR/baz/QUX"
 		pattern     string = "/foo/{bar}/baz/{qux}"
@@ -283,7 +275,7 @@ func TestMiddleware(t *testing.T) {
 			res     *httptest.ResponseRecorder
 			visited int = 0
 		)
-		one := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+		one := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			visited++
 			if ctx.Get(stateNil) != nil {
 				t.Errorf(
@@ -292,15 +284,15 @@ func TestMiddleware(t *testing.T) {
 			}
 			ctx.Set("one", 1).Next()
 		}
-		two := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+		two := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			visited++
 			ctx.Set("two", 2).Next()
 		}
-		three := func(ctx *bear.Context) {
+		three := func(ctx *Context) {
 			visited++
 			ctx.Set("three", 3).Next()
 		}
-		last := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+		last := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			visited++
 			if !reflect.DeepEqual(params, ctx.Params) {
 				t.Errorf(
@@ -338,27 +330,27 @@ func TestMiddleware(t *testing.T) {
 	}
 }
 func TestMiddlewareRejectionA(t *testing.T) {
-	mux := bear.New()
-	one := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	mux := New()
+	one := func(http.ResponseWriter, *http.Request, *Context) {}
 	two := func(http.ResponseWriter, *http.Request) {}
-	last := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	last := func(http.ResponseWriter, *http.Request, *Context) {}
 	if err := mux.On("*", "*", one, two, last); err == nil {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
 func TestMiddlewareRejectionB(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
-	two := bear.HandlerFunc(
-		func(http.ResponseWriter, *http.Request, *bear.Context) {})
-	last := bear.HandlerFunc(
-		func(http.ResponseWriter, *http.Request, *bear.Context) {})
+	two := HandlerFunc(
+		func(http.ResponseWriter, *http.Request, *Context) {})
+	last := HandlerFunc(
+		func(http.ResponseWriter, *http.Request, *Context) {})
 	if err := mux.On("*", "*", one, two, last); err == nil {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
 func TestMiddlewareRejectionC(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	two := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	if err := mux.On("*", "*", one, two); err == nil {
@@ -366,7 +358,7 @@ func TestMiddlewareRejectionC(t *testing.T) {
 	}
 }
 func TestMiddlewareRejectionD(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
 	two := func(http.ResponseWriter, *http.Request) {}
 	if err := mux.On("*", "*", one, two); err == nil {
@@ -374,13 +366,13 @@ func TestMiddlewareRejectionD(t *testing.T) {
 	}
 }
 func TestMiddlewareRejectionE(t *testing.T) {
-	mux := bear.New()
+	mux := New()
 	var (
-		one   bear.HandlerFunc
+		one   HandlerFunc
 		two   http.HandlerFunc
 		three func(http.ResponseWriter, *http.Request)
-		four  func(http.ResponseWriter, *http.Request, *bear.Context)
-		five  func(*bear.Context)
+		four  func(http.ResponseWriter, *http.Request, *Context)
+		five  func(*Context)
 	)
 	if err := mux.On("GET", "/", one); err == nil {
 		t.Errorf("nil middleware was accepted")
@@ -400,8 +392,8 @@ func TestMiddlewareRejectionE(t *testing.T) {
 }
 func TestNoHandlers(t *testing.T) {
 	var (
-		mux  *bear.Mux = bear.New()
-		path string    = "/foo/bar"
+		mux  *Mux   = New()
+		path string = "/foo/bar"
 		req  *http.Request
 		res  *httptest.ResponseRecorder
 		want int = http.StatusNotFound
@@ -417,12 +409,12 @@ func TestNoHandlers(t *testing.T) {
 }
 func TestNotFoundCustom(t *testing.T) {
 	var (
-		method       string    = "GET"
-		mux          *bear.Mux = bear.New()
-		pathFound    string    = "/foo/bar"
-		pathLost     string    = "/foo/bar/baz"
-		patternFound string    = "/foo/bar"
-		patternLost  string    = "/*"
+		method       string = "GET"
+		mux          *Mux   = New()
+		pathFound    string = "/foo/bar"
+		pathLost     string = "/foo/bar/baz"
+		patternFound string = "/foo/bar"
+		patternLost  string = "/*"
 		req          *http.Request
 		res          *httptest.ResponseRecorder
 		wantFound    int = http.StatusOK
@@ -471,13 +463,13 @@ func TestNotFoundNoParams(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleContextTest(
-			"anonymous *bear.Context func",
+			"anonymous *Context func",
 			verb, path, pattern, want)(t)
 	}
 }
@@ -495,21 +487,21 @@ func TestNotFoundParams(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleContextTest(
-			"anonymous *bear.Context func",
+			"anonymous *Context func",
 			verb, path, pattern, want)(t)
 	}
 }
 func TestNotFoundRoot(t *testing.T) {
 	var (
-		method string    = "GET"
-		mux    *bear.Mux = bear.New()
-		path   string    = "/"
+		method string = "GET"
+		mux    *Mux   = New()
+		path   string = "/"
 		req    *http.Request
 		res    *httptest.ResponseRecorder
 		want   int = http.StatusNotFound
@@ -535,23 +527,23 @@ func TestNotFoundWildA(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleContextTest(
-			"anonymous *bear.Context func",
+			"anonymous *Context func",
 			verb, path, pattern, want)(t)
 	}
 }
 func TestNotFoundWildB(t *testing.T) {
 	var (
-		method     string    = "GET"
-		mux        *bear.Mux = bear.New()
-		path       string    = "/bar/baz"
-		patternOne string    = "/foo/*"
-		patternTwo string    = "/bar"
+		method     string = "GET"
+		mux        *Mux   = New()
+		path       string = "/bar/baz"
+		patternOne string = "/foo/*"
+		patternTwo string = "/bar"
 		req        *http.Request
 		res        *httptest.ResponseRecorder
 		want       int = http.StatusNotFound
@@ -568,11 +560,11 @@ func TestNotFoundWildB(t *testing.T) {
 }
 func TestOKMultiRuleParams(t *testing.T) {
 	var (
-		method     string    = "GET"
-		mux        *bear.Mux = bear.New()
-		path       string    = "/bar/baz"
-		patternOne string    = "/foo/*"
-		patternTwo string    = "/bar/baz"
+		method     string = "GET"
+		mux        *Mux   = New()
+		path       string = "/bar/baz"
+		patternOne string = "/foo/*"
+		patternTwo string = "/bar/baz"
 		req        *http.Request
 		res        *httptest.ResponseRecorder
 		want       int = http.StatusOK
@@ -601,7 +593,7 @@ func TestOKNoParams(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
@@ -623,7 +615,7 @@ func TestOKParams(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
 		paramBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		paramBearAnonTest(
 			"anonymous http.HandlerFunc",
@@ -645,7 +637,7 @@ func TestOKParamsTrailingSlash(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
 		paramBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		paramBearAnonTest(
 			"anonymous http.HandlerFunc",
@@ -666,7 +658,7 @@ func TestOKRoot(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
@@ -687,7 +679,7 @@ func TestOKWildRoot(t *testing.T) {
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
-			"bear.HandlerFunc",
+			"HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearAnonTest(
 			"anonymous http.HandlerFunc",
@@ -696,17 +688,17 @@ func TestOKWildRoot(t *testing.T) {
 }
 func TestSanitizePatternPrefixSuffix(t *testing.T) {
 	var (
-		method  string    = "GET"
-		mux     *bear.Mux = bear.New()
-		pattern string    = "foo/{bar}/*"
-		path    string    = "/foo/ABC/baz"
-		want    string    = "/foo/{bar}/*/"
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "foo/{bar}/*"
+		path    string = "/foo/ABC/baz"
+		want    string = "/foo/{bar}/*/"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 	)
-	handler := func(res http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	handler := func(res http.ResponseWriter, _ *http.Request, ctx *Context) {
 		res.WriteHeader(http.StatusOK)
-		res.Write([]byte(ctx.Pattern()))
+		res.Write([]byte(ctx.tree.pattern))
 	}
 	mux.On(method, pattern, handler)
 	req, _ = http.NewRequest(method, path, nil)
@@ -718,17 +710,17 @@ func TestSanitizePatternPrefixSuffix(t *testing.T) {
 }
 func TestSanitizePatternDoubleSlash(t *testing.T) {
 	var (
-		method  string    = "GET"
-		mux     *bear.Mux = bear.New()
-		pattern string    = "///foo///{bar}////*//"
-		path    string    = "/foo/ABC/baz"
-		want    string    = "/foo/{bar}/*/"
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "///foo///{bar}////*//"
+		path    string = "/foo/ABC/baz"
+		want    string = "/foo/{bar}/*/"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 	)
-	handler := func(res http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	handler := func(res http.ResponseWriter, _ *http.Request, ctx *Context) {
 		res.WriteHeader(http.StatusOK)
-		res.Write([]byte(ctx.Pattern()))
+		res.Write([]byte(ctx.tree.pattern))
 	}
 	mux.On(method, pattern, handler)
 	req, _ = http.NewRequest(method, path, nil)
@@ -739,20 +731,20 @@ func TestSanitizePatternDoubleSlash(t *testing.T) {
 	}
 }
 func TestUnreachableA(t *testing.T) {
-	mux := bear.New()
-	one := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	mux := New()
+	one := func(http.ResponseWriter, *http.Request, *Context) {}
 	two := func(http.ResponseWriter, *http.Request) {}
-	three := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	three := func(http.ResponseWriter, *http.Request, *Context) {}
 	err := mux.On("*", "*", one, two, three)
 	if nil == err {
 		t.Errorf("unreachable A")
 	}
 }
 func TestUnreachableB(t *testing.T) {
-	mux := bear.New()
-	one := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	mux := New()
+	one := func(http.ResponseWriter, *http.Request, *Context) {}
 	two := func(http.ResponseWriter, *http.Request) {}
-	three := func(*bear.Context) {}
+	three := func(*Context) {}
 	err := mux.On("*", "*", one, two, three)
 	if nil == err {
 		t.Errorf("unreachable B")
@@ -760,21 +752,21 @@ func TestUnreachableB(t *testing.T) {
 }
 func TestWildcardCompeting(t *testing.T) {
 	var (
-		method       string    = "GET"
-		mux          *bear.Mux = bear.New()
-		patternOne   string    = "/*"
-		pathOne      string    = "/bar/baz"
-		wantOne      string    = "bar/baz"
-		patternTwo   string    = "/foo/*"
-		pathTwo      string    = "/foo/baz"
-		wantTwo      string    = "baz"
-		patternThree string    = "/foo/bar/*"
-		pathThree    string    = "/foo/bar/bar/baz"
-		wantThree    string    = "bar/baz"
+		method       string = "GET"
+		mux          *Mux   = New()
+		patternOne   string = "/*"
+		pathOne      string = "/bar/baz"
+		wantOne      string = "bar/baz"
+		patternTwo   string = "/foo/*"
+		pathTwo      string = "/foo/baz"
+		wantTwo      string = "baz"
+		patternThree string = "/foo/bar/*"
+		pathThree    string = "/foo/bar/bar/baz"
+		wantThree    string = "bar/baz"
 		req          *http.Request
 		res          *httptest.ResponseRecorder
 	)
-	handler := func(res http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	handler := func(res http.ResponseWriter, _ *http.Request, ctx *Context) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte(ctx.Params["*"]))
 	}
@@ -808,9 +800,9 @@ func TestWildcardCompeting(t *testing.T) {
 }
 func TestWildcardMethod(t *testing.T) {
 	var (
-		mux     *bear.Mux = bear.New()
-		path    string    = "/foo/bar"
-		pattern string    = "/foo/bar"
+		mux     *Mux   = New()
+		path    string = "/foo/bar"
+		pattern string = "/foo/bar"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 		want    int = http.StatusOK
@@ -818,7 +810,7 @@ func TestWildcardMethod(t *testing.T) {
 	mux.On(
 		"*",
 		pattern,
-		func(http.ResponseWriter, *http.Request, *bear.Context) {})
+		func(http.ResponseWriter, *http.Request, *Context) {})
 	for _, verb := range verbs {
 		req, _ = http.NewRequest(verb, path, nil)
 		res = httptest.NewRecorder()
@@ -832,11 +824,11 @@ func TestWildcardMethod(t *testing.T) {
 }
 func TestWildcardMethodWarning(t *testing.T) {
 	var (
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/foo/bar/"
-		verb    string    = "GET"
+		mux     *Mux   = New()
+		pattern string = "/foo/bar/"
+		verb    string = "GET"
 	)
-	handler := func(http.ResponseWriter, *http.Request, *bear.Context) {}
+	handler := func(http.ResponseWriter, *http.Request, *Context) {}
 	if err := mux.On(verb, pattern, handler); err != nil {
 		t.Errorf("%s %s should have registered", verb, pattern)
 	}
@@ -846,8 +838,8 @@ func TestWildcardMethodWarning(t *testing.T) {
 }
 func TestWildcardNotLast(t *testing.T) {
 	var (
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/foo/*/bar"
+		mux     *Mux   = New()
+		pattern string = "/foo/*/bar"
 	)
 	handler := func(res http.ResponseWriter, req *http.Request) {}
 	err := mux.On("*", pattern, handler)
@@ -859,15 +851,15 @@ func TestWildcardNotLast(t *testing.T) {
 }
 func TestWildcardParams(t *testing.T) {
 	var (
-		method  string    = "GET"
-		mux     *bear.Mux = bear.New()
-		pattern string    = "/foo/{bar}/*"
-		path    string    = "/foo/ABC/baz"
-		want    string    = "ABC"
+		method  string = "GET"
+		mux     *Mux   = New()
+		pattern string = "/foo/{bar}/*"
+		path    string = "/foo/ABC/baz"
+		want    string = "ABC"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 	)
-	handler := func(res http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	handler := func(res http.ResponseWriter, _ *http.Request, ctx *Context) {
 		res.WriteHeader(http.StatusOK)
 		res.Write([]byte(ctx.Params["bar"]))
 	}
@@ -881,10 +873,10 @@ func TestWildcardParams(t *testing.T) {
 }
 func TestAlways(t *testing.T) {
 	var (
-		mux      *bear.Mux = bear.New()
-		pattern            = "/foo"
-		method             = "GET"
-		path               = "/foo"
+		mux      *Mux = New()
+		pattern       = "/foo"
+		method        = "GET"
+		path          = "/foo"
 		req      *http.Request
 		res      *httptest.ResponseRecorder
 		keyOne   = "one"
@@ -892,13 +884,13 @@ func TestAlways(t *testing.T) {
 		keyTwo   = "two"
 		stateTwo = 2
 	)
-	one := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	one := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 		ctx.Set(keyOne, stateOne).Next()
 	}
-	two := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	two := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 		ctx.Set(keyTwo, stateTwo).Next()
 	}
-	three := func(res http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	three := func(res http.ResponseWriter, _ *http.Request, ctx *Context) {
 		first := reflect.DeepEqual(ctx.Get(keyOne), stateOne)
 		second := reflect.DeepEqual(ctx.Get(keyTwo), stateTwo)
 		if !first || !second {
@@ -906,7 +898,7 @@ func TestAlways(t *testing.T) {
 		}
 	}
 	mux.Always(one)
-	mux.Always(bear.HandlerFunc(two))
+	mux.Always(HandlerFunc(two))
 	mux.On(method, pattern, three)
 	req, _ = http.NewRequest(method, path, nil)
 	res = httptest.NewRecorder()
@@ -915,22 +907,22 @@ func TestAlways(t *testing.T) {
 
 func TestAlwaysBeforeNotFound(t *testing.T) {
 	var (
-		mux      *bear.Mux = bear.New()
-		pattern            = "/foo"
-		method             = "GET"
-		path               = "/bar"
+		mux      *Mux = New()
+		pattern       = "/foo"
+		method        = "GET"
+		path          = "/bar"
 		req      *http.Request
 		res      *httptest.ResponseRecorder
 		keyOne   = "one"
 		stateOne = 1
 	)
-	always := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	always := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 		ctx.Set(keyOne, stateOne).Next()
 	}
-	handler := func(_ http.ResponseWriter, _ *http.Request, _ *bear.Context) {
+	handler := func(_ http.ResponseWriter, _ *http.Request, _ *Context) {
 		t.Errorf("handler should not be fired because path != pattern")
 	}
-	notFound := func(_ http.ResponseWriter, _ *http.Request, ctx *bear.Context) {
+	notFound := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 		first := reflect.DeepEqual(ctx.Get(keyOne), stateOne)
 		if !first {
 			t.Errorf("Always middleware did not execute before notFound")
@@ -945,22 +937,22 @@ func TestAlwaysBeforeNotFound(t *testing.T) {
 }
 func TestAlwaysRejection(t *testing.T) {
 	var (
-		mux   *bear.Mux = bear.New()
-		one   bear.HandlerFunc
+		mux   *Mux = New()
+		one   HandlerFunc
 		two   http.HandlerFunc
 		three func(http.ResponseWriter, *http.Request)
-		four  func(http.ResponseWriter, *http.Request, *bear.Context)
+		four  func(http.ResponseWriter, *http.Request, *Context)
 	)
 	if err := mux.Always(one); err == nil {
-		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil HandlerFunc or its signature")
 	}
 	if err := mux.Always(two); err == nil {
-		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil HandlerFunc or its signature")
 	}
 	if err := mux.Always(three); err == nil {
-		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil HandlerFunc or its signature")
 	}
 	if err := mux.Always(four); err == nil {
-		t.Errorf("Always requires non-nil bear.HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil HandlerFunc or its signature")
 	}
 }

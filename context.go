@@ -66,6 +66,3 @@ func (ctx *Context) Set(key string, value interface{}) *Context {
 	ctx.state[key] = value
 	return ctx
 }
-
-// Pattern returns the URL pattern that a request matched.
-func (ctx *Context) Pattern() string { return ctx.tree.pattern }
