@@ -8,7 +8,7 @@ package bear
 
 import "regexp"
 
-const ( // global constants
+const (
 	asterisk  = "*"
 	dynamic   = "\x00"
 	empty     = ""
@@ -18,7 +18,7 @@ const ( // global constants
 	wildcard  = "\x00\x00"
 )
 
-var ( // global variables
+var (
 	dyn   = regexp.MustCompile(`\{(\w+)\}`)
 	dbl   = regexp.MustCompile(`[\/]{2,}`)
 	verbs = [8]string{

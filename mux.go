@@ -10,17 +10,15 @@ import (
 	"strings"
 )
 
-/*
-Mux is an HTTP multiplexer. It uses a tree structure for fast routing,
-supports dynamic parameters, middleware, and accepts both native
-http.HandlerFunc or bear.HandlerFunc, which accepts an extra *Context argument
-that allows storing state (using the Get() and Set() methods) and calling the
-Next() middleware.
-*/
+// Mux is an HTTP multiplexer. It uses a tree structure for fast routing,
+// supports dynamic parameters, middleware, and accepts both native
+// http.HandlerFunc or bear.HandlerFunc, which accepts an extra *Context
+// argument that allows storing state (using the Get() and Set() methods) and
+// calling the Next() middleware.
 type Mux struct {
 	trees  [8]*tree      // pointers to a tree for each HTTP verb
 	always []HandlerFunc // list of handlers that run for all requests
-	wild   [8]bool       // true if a tree has a wildcard (requires back-references)
+	wild   [8]bool       // true if a tree has wildcard (requires back-references)
 }
 
 func parsePath(s string) (components []string, last int) {
@@ -42,15 +40,13 @@ func parsePath(s string) (components []string, last int) {
 	return components, last
 }
 
-/*
-Always adds one or more handlers that will run before every single request.
-Multiple calls to Always will append the current list of Always handlers with
-the newly added handlers.
-
-Handlers must be either bear.HandlerFunc functions or functions that match
-the bear.HandlerFunc signature and they should call (*Context).Next to
-continue the response life cycle.
-*/
+// Always adds one or more handlers that will run before every single request.
+// Multiple calls to Always will append the current list of Always handlers with
+// the newly added handlers.
+//
+// Handlers must be either bear.HandlerFunc functions or functions that match
+// the bear.HandlerFunc signature and they should call (*Context).Next to
+// continue the response life cycle.
 func (mux *Mux) Always(handlers ...interface{}) error {
 	if functions, err := handlerizeStrict(handlers); err != nil {
 		return err
@@ -65,34 +61,34 @@ func (mux *Mux) Always(handlers ...interface{}) error {
 // signature of one of those two. NOTE: if http.HandlerFunc (or a function
 // conforming to its signature) is used no other handlers can *follow* it, i.e.
 // it is not middleware.
-
+//
 // It returns an error if it fails, but does not panic. Verb strings are
 // uppercase HTTP methods. There is a special verb "*" which can be used to
 // answer *all* HTTP methods. It is not uncommon for the verb "*" to return
 // errors, because a path may already have a listener associated with one HTTP
 // verb before the "*" verb is called. For example, this common and useful
 // pattern will return an error that can safely be ignored (see error example).
-
+//
 // Pattern strings are composed of tokens that are separated by "/" characters.
 // There are three kinds of tokens:
-
+//
 // 1. static path strings: "/foo/bar/baz/etc"
-
+//
 // 2. dynamically populated parameters "/foo/{bar}/baz" (where "bar" will be
 // populated in the *Context.Params)
-
+//
 // 3. wildcard tokens "/foo/bar/*" where * has to be the final token.
 // Parsed URL params are available in handlers via the Params map of the
 // *Context argument.
-
+//
 // Notes:
-
+//
 // 1. A trailing slash / is always implied, even when not explicit.
-
+//
 // 2. Wildcard (*) patterns are only matched if no other (more specific)
 // pattern matches. If multiple wildcard rules match, the most specific takes
 // precedence.
-
+//
 // 3. Wildcard patterns do *not* match empty strings: a request to /foo/bar will
 // not match the pattern "/foo/bar/*". The only exception to this is the root
 // wildcard pattern "/*" which will match the request path / if no root

@@ -7,7 +7,7 @@ import (
 	"github.com/ursiform/bear"
 )
 
-func ExampleMux_On_error() {
+func ExampleOn_error() {
 	mux := bear.New()
 	handlerOne := func(http.ResponseWriter, *http.Request) {}
 	handlerTwo := func(http.ResponseWriter, *http.Request) {}
