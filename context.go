@@ -6,6 +6,7 @@ package bear
 
 import "net/http"
 
+// Context is state of each request.
 type Context struct {
 	// Params is a map of string keys with string values that is populated
 	// by the dynamic URL parameters (if any).
@@ -27,9 +28,8 @@ type Context struct {
 func (ctx *Context) Get(key string) interface{} {
 	if nil == ctx.state {
 		return nil
-	} else {
-		return ctx.state[key]
 	}
+	return ctx.state[key]
 }
 
 // Next calls the next middleware (if any) that was registered as a handler for

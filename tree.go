@@ -36,11 +36,10 @@ func (tr *tree) set(verb string, pattern string, handlers []HandlerFunc,
 		if nil != tr.handlers {
 			*err = fmt.Errorf("bear: %s %s exists, ignoring", verb, pattern)
 			return
-		} else {
-			tr.pattern = slash
-			tr.handlers = handlers
-			return
 		}
+		tr.pattern = slash
+		tr.handlers = handlers
+		return
 	}
 	if nil == tr.children {
 		tr.children = make(map[string]*tree)

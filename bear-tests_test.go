@@ -272,7 +272,7 @@ func TestMiddleware(t *testing.T) {
 		var (
 			req     *http.Request
 			res     *httptest.ResponseRecorder
-			visited int = 0
+			visited int
 		)
 		one := func(_ http.ResponseWriter, _ *http.Request, ctx *Context) {
 			visited++
