@@ -17,7 +17,7 @@ type Context struct {
 	// Request is the same as the *http.Request that all handlers receive
 	// and is referenced in Context for convenience.
 	Request *http.Request
-	// ReponseWriter is the same as the http.ResponseWriter that all handlers
+	// ResponseWriter is the same as the http.ResponseWriter that all handlers
 	// receive and is referenced in Context for convenience.
 	ResponseWriter http.ResponseWriter
 	state          map[string]interface{}
