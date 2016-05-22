@@ -60,45 +60,43 @@ func (mux *Mux) Always(handlers ...interface{}) error {
 	}
 }
 
-/*
-On adds HTTP verb handler(s) for a URL pattern. The handler argument(s)
-should either be http.HandlerFunc or bear.HandlerFunc or conform to the
-signature of one of those two. NOTE: if http.HandlerFunc (or a function
-conforming to its signature) is used no other handlers can *follow* it, i.e.
-it is not middleware.
+// On adds HTTP verb handler(s) for a URL pattern. The handler argument(s)
+// should either be http.HandlerFunc or bear.HandlerFunc or conform to the
+// signature of one of those two. NOTE: if http.HandlerFunc (or a function
+// conforming to its signature) is used no other handlers can *follow* it, i.e.
+// it is not middleware.
 
-It returns an error if it fails, but does not panic. Verb strings are
-uppercase HTTP methods. There is a special verb "*" which can be used to
-answer *all* HTTP methods. It is not uncommon for the verb "*" to return errors,
-because a path may already have a listener associated with one HTTP verb before
-the "*" verb is called. For example, this common and useful pattern will return
-an error that can safely be ignored (see error example).
+// It returns an error if it fails, but does not panic. Verb strings are
+// uppercase HTTP methods. There is a special verb "*" which can be used to
+// answer *all* HTTP methods. It is not uncommon for the verb "*" to return
+// errors, because a path may already have a listener associated with one HTTP
+// verb before the "*" verb is called. For example, this common and useful
+// pattern will return an error that can safely be ignored (see error example).
 
-Pattern strings are composed of tokens that are separated by "/" characters.
-There are three kinds of tokens:
+// Pattern strings are composed of tokens that are separated by "/" characters.
+// There are three kinds of tokens:
 
-1. static path strings: "/foo/bar/baz/etc"
+// 1. static path strings: "/foo/bar/baz/etc"
 
-2. dynamically populated parameters "/foo/{bar}/baz" (where "bar" will be
-populated in the *Context.Params)
+// 2. dynamically populated parameters "/foo/{bar}/baz" (where "bar" will be
+// populated in the *Context.Params)
 
-3. wildcard tokens "/foo/bar/*" where * has to be the final token.
-Parsed URL params are available in handlers via the Params map of the
-*Context argument.
+// 3. wildcard tokens "/foo/bar/*" where * has to be the final token.
+// Parsed URL params are available in handlers via the Params map of the
+// *Context argument.
 
-Notes:
+// Notes:
 
-1. A trailing slash / is always implied, even when not explicit.
+// 1. A trailing slash / is always implied, even when not explicit.
 
-2. Wildcard (*) patterns are only matched if no other (more specific)
-pattern matches. If multiple wildcard rules match, the most specific takes
-precedence.
+// 2. Wildcard (*) patterns are only matched if no other (more specific)
+// pattern matches. If multiple wildcard rules match, the most specific takes
+// precedence.
 
-3. Wildcard patterns do *not* match empty strings: a request to /foo/bar will
-not match the pattern "/foo/bar/*". The only exception to this is the root
-wildcard pattern "/*" which will match the request path / if no root
-handler exists.
-*/
+// 3. Wildcard patterns do *not* match empty strings: a request to /foo/bar will
+// not match the pattern "/foo/bar/*". The only exception to this is the root
+// wildcard pattern "/*" which will match the request path / if no root
+// handler exists.
 func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 	if verb == asterisk {
 		errors := []string{}
@@ -109,9 +107,8 @@ func (mux *Mux) On(verb string, pattern string, handlers ...interface{}) error {
 		}
 		if 0 == len(errors) {
 			return nil
-		} else {
-			return fmt.Errorf(strings.Join(errors, "\n"))
 		}
+		return fmt.Errorf(strings.Join(errors, "\n"))
 	}
 	tr, wildcards := mux.tree(verb)
 	if nil == tr {
@@ -256,8 +253,8 @@ func (mux *Mux) tree(name string) (*tree, *bool) {
 func New() *Mux {
 	mux := new(Mux)
 	mux.trees = [8]*tree{
-		&tree{}, &tree{}, &tree{}, &tree{},
-		&tree{}, &tree{}, &tree{}, &tree{}}
+		{}, {}, {}, {},
+		{}, {}, {}, {}}
 	mux.wild = [8]bool{
 		false, false, false, false,
 		false, false, false, false}

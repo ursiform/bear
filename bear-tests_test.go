@@ -19,7 +19,7 @@ func paramBearTest(
 	pattern string, want map[string]string) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -49,7 +49,7 @@ func paramBearAnonTest(
 	pattern string, want map[string]string) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -73,11 +73,11 @@ func paramBearAnonTest(
 }
 
 // Generate tests for requests (i.e. no *Context) using http.HandlerFunc.
-func simpleHttpTest(
+func simpleHTTPTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -96,11 +96,11 @@ func simpleHttpTest(
 
 // Generate tests for param AND no-param requests (i.e. no *Context) using
 // anonymous http.HandlerFunc compatible func.
-func simpleHttpAnonTest(
+func simpleHTTPAnonTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -121,7 +121,7 @@ func simpleBearTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -144,7 +144,7 @@ func simpleContextTest(
 	label string, method string, path string, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -163,11 +163,10 @@ func simpleContextTest(
 
 // Generate tests for simple no-param requests using anonymous HandlerFunc
 // compatible functions.
-func simpleBearAnonTest(label string, method string, path string,
-	pattern string, want int) tester {
+func simpleBearAnonTest(label, method, path, pattern string, want int) tester {
 	return func(t *testing.T) {
 		var (
-			mux *Mux = New()
+			mux = New()
 			req *http.Request
 			res *httptest.ResponseRecorder
 		)
@@ -201,11 +200,11 @@ func TestBadVerbOn(t *testing.T) {
 }
 func TestBadVerbServe(t *testing.T) {
 	var (
-		method  string = "BLUB"
-		mux     *Mux   = New()
-		pattern string = "/"
-		path    string = "/"
-		want    int    = http.StatusNotFound
+		method  = "BLUB"
+		mux     = New()
+		pattern = "/"
+		path    = "/"
+		want    = http.StatusNotFound
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 	)
@@ -221,8 +220,8 @@ func TestBadVerbServe(t *testing.T) {
 func TestDuplicateFailure(t *testing.T) {
 	var (
 		handler HandlerFunc
-		mux     *Mux   = New()
-		pattern string = "/foo/{bar}"
+		mux     = New()
+		pattern = "/foo/{bar}"
 	)
 	handler = HandlerFunc(
 		func(http.ResponseWriter, *http.Request, *Context) {})
@@ -239,8 +238,8 @@ func TestDuplicateFailure(t *testing.T) {
 func TestDuplicateFailureRoot(t *testing.T) {
 	var (
 		handler HandlerFunc
-		mux     *Mux   = New()
-		pattern string = "/"
+		mux     = New()
+		pattern = "/"
 	)
 	handler = HandlerFunc(
 		func(http.ResponseWriter, *http.Request, *Context) {})
@@ -451,15 +450,15 @@ func TestNotFoundCustom(t *testing.T) {
 }
 func TestNotFoundNoParams(t *testing.T) {
 	var (
-		path    string = "/foo/bar"
-		pattern string = "/foo"
-		want    int    = http.StatusNotFound
+		path    = "/foo/bar"
+		pattern = "/foo"
+		want    = http.StatusNotFound
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -475,15 +474,15 @@ func TestNotFoundNoParams(t *testing.T) {
 }
 func TestNotFoundParams(t *testing.T) {
 	var (
-		path    string = "/foo/BAR/baz"
-		pattern string = "/foo/{bar}/baz/{qux}"
-		want    int    = http.StatusNotFound
+		path    = "/foo/BAR/baz"
+		pattern = "/foo/{bar}/baz/{qux}"
+		want    = http.StatusNotFound
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -515,15 +514,15 @@ func TestNotFoundRoot(t *testing.T) {
 }
 func TestNotFoundWildA(t *testing.T) {
 	var (
-		path    string = "/foo"
-		pattern string = "/foo/*"
-		want    int    = http.StatusNotFound
+		path    = "/foo"
+		pattern = "/foo/*"
+		want    = http.StatusNotFound
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -581,15 +580,15 @@ func TestOKMultiRuleParams(t *testing.T) {
 }
 func TestOKNoParams(t *testing.T) {
 	var (
-		path    string = "/foo/bar"
-		pattern string = "/foo/bar"
-		want    int    = http.StatusOK
+		path    = "/foo/bar"
+		pattern = "/foo/bar"
+		want    = http.StatusOK
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -602,16 +601,16 @@ func TestOKNoParams(t *testing.T) {
 }
 func TestOKParams(t *testing.T) {
 	var (
-		path    string = "/foo/BAR/baz/QUX"
-		pattern string = "/foo/{bar}/baz/{qux}"
+		path    = "/foo/BAR/baz/QUX"
+		pattern = "/foo/{bar}/baz/{qux}"
 		want    map[string]string
 	)
 	want = map[string]string{"bar": "BAR", "qux": "QUX"}
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
 		paramBearTest(
@@ -624,16 +623,16 @@ func TestOKParams(t *testing.T) {
 }
 func TestOKParamsTrailingSlash(t *testing.T) {
 	var (
-		path    string = "/foo/BAR/baz/QUX/"
-		pattern string = "/foo/{bar}/baz/{qux}"
+		path    = "/foo/BAR/baz/QUX/"
+		pattern = "/foo/{bar}/baz/{qux}"
 		want    map[string]string
 	)
 	want = map[string]string{"bar": "BAR", "qux": "QUX"}
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, http.StatusOK)(t)
 		paramBearTest(
@@ -646,15 +645,15 @@ func TestOKParamsTrailingSlash(t *testing.T) {
 }
 func TestOKRoot(t *testing.T) {
 	var (
-		path    string = "/"
-		pattern string = "/"
-		want    int    = http.StatusOK
+		path    = "/"
+		pattern = "/"
+		want    = http.StatusOK
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -667,15 +666,15 @@ func TestOKRoot(t *testing.T) {
 }
 func TestOKWildRoot(t *testing.T) {
 	var (
-		path    string = "/"
-		pattern string = "*"
-		want    int    = http.StatusOK
+		path    = "/"
+		pattern = "*"
+		want    = http.StatusOK
 	)
 	for _, verb := range verbs {
-		simpleHttpTest(
+		simpleHTTPTest(
 			"http.HandlerFunc",
 			verb, path, pattern, want)(t)
-		simpleHttpAnonTest(
+		simpleHTTPAnonTest(
 			"anonymous http.HandlerFunc",
 			verb, path, pattern, want)(t)
 		simpleBearTest(
@@ -688,10 +687,10 @@ func TestOKWildRoot(t *testing.T) {
 }
 func TestSanitizePatternPrefixSuffix(t *testing.T) {
 	var (
-		method  string = "GET"
-		mux     *Mux   = New()
-		pattern string = "foo/{bar}/*"
-		path    string = "/foo/ABC/baz"
+		method         = "GET"
+		mux            = New()
+		pattern        = "foo/{bar}/*"
+		path           = "/foo/ABC/baz"
 		want    string = "/foo/{bar}/*/"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
@@ -710,10 +709,10 @@ func TestSanitizePatternPrefixSuffix(t *testing.T) {
 }
 func TestSanitizePatternDoubleSlash(t *testing.T) {
 	var (
-		method  string = "GET"
-		mux     *Mux   = New()
-		pattern string = "///foo///{bar}////*//"
-		path    string = "/foo/ABC/baz"
+		method         = "GET"
+		mux            = New()
+		pattern        = "///foo///{bar}////*//"
+		path           = "/foo/ABC/baz"
 		want    string = "/foo/{bar}/*/"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
@@ -800,9 +799,9 @@ func TestWildcardCompeting(t *testing.T) {
 }
 func TestWildcardMethod(t *testing.T) {
 	var (
-		mux     *Mux   = New()
-		path    string = "/foo/bar"
-		pattern string = "/foo/bar"
+		mux     = New()
+		path    = "/foo/bar"
+		pattern = "/foo/bar"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
 		want    int = http.StatusOK
@@ -824,8 +823,8 @@ func TestWildcardMethod(t *testing.T) {
 }
 func TestWildcardMethodWarning(t *testing.T) {
 	var (
-		mux     *Mux   = New()
-		pattern string = "/foo/bar/"
+		mux            = New()
+		pattern        = "/foo/bar/"
 		verb    string = "GET"
 	)
 	handler := func(http.ResponseWriter, *http.Request, *Context) {}
@@ -838,8 +837,8 @@ func TestWildcardMethodWarning(t *testing.T) {
 }
 func TestWildcardNotLast(t *testing.T) {
 	var (
-		mux     *Mux   = New()
-		pattern string = "/foo/*/bar"
+		mux     = New()
+		pattern = "/foo/*/bar"
 	)
 	handler := func(res http.ResponseWriter, req *http.Request) {}
 	err := mux.On("*", pattern, handler)
@@ -851,10 +850,10 @@ func TestWildcardNotLast(t *testing.T) {
 }
 func TestWildcardParams(t *testing.T) {
 	var (
-		method  string = "GET"
-		mux     *Mux   = New()
-		pattern string = "/foo/{bar}/*"
-		path    string = "/foo/ABC/baz"
+		method         = "GET"
+		mux            = New()
+		pattern        = "/foo/{bar}/*"
+		path           = "/foo/ABC/baz"
 		want    string = "ABC"
 		req     *http.Request
 		res     *httptest.ResponseRecorder
