@@ -147,7 +147,8 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		Request:        req,
 		ResponseWriter: res}
 	current := &tr.children
-	if !*wildcards { // no wildcards: simpler, slightly faster
+	// If no wildcards: simpler, slightly faster logic (this if *always* returns).
+	if !*wildcards {
 		for index, component := range components {
 			key = component
 			if nil == *current {
@@ -173,51 +174,51 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			}
 			current = &(*current)[key].children
 		}
-	} else {
-		wild := tr.children[wildcard]
-		for index, component := range components {
-			key = component
-			if nil == (*current)[key] {
-				if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
-					if nil == wild { // there's no wildcard up the tree
-						http.NotFound(res, req)
-					} else { // wildcard pattern match
-						context.tree = wild
-						context.Next()
-					}
-					return
-				} else {
-					if nil != (*current)[wildcard] {
-						// i.e. there is a more proximate wildcard
-						wild = (*current)[wildcard]
-						context.param(asterisk,
-							strings.Join(components[index:], empty), capacity)
-					}
-					if nil != (*current)[dynamic] {
-						key = dynamic
-						context.param((*current)[key].name, component, capacity)
-					} else { // wildcard pattern match
-						context.tree = wild
-						context.Next()
-						return
-					}
-				}
-			}
-			if index == last {
-				if nil == (*current)[key].handlers {
+	}
+	// If wildcards exist, more involved logic.
+	wild := tr.children[wildcard]
+	for index, component := range components {
+		key = component
+		if nil == (*current)[key] {
+			if nil == (*current)[dynamic] && nil == (*current)[wildcard] {
+				if nil == wild { // there's no wildcard up the tree
 					http.NotFound(res, req)
-				} else { // non-wildcard pattern match
-					context.tree = (*current)[key]
+				} else { // wildcard pattern match
+					context.tree = wild
 					context.Next()
 				}
 				return
+			} else {
+				if nil != (*current)[wildcard] {
+					// i.e. there is a more proximate wildcard
+					wild = (*current)[wildcard]
+					context.param(asterisk,
+						strings.Join(components[index:], empty), capacity)
+				}
+				if nil != (*current)[dynamic] {
+					key = dynamic
+					context.param((*current)[key].name, component, capacity)
+				} else { // wildcard pattern match
+					context.tree = wild
+					context.Next()
+					return
+				}
 			}
-			current = &(*current)[key].children
-			if nil != (*current)[wildcard] {
-				wild = (*current)[wildcard] // there's a more proximate wildcard
-				context.param(asterisk,
-					strings.Join(components[index:], empty), capacity)
+		}
+		if index == last {
+			if nil == (*current)[key].handlers {
+				http.NotFound(res, req)
+			} else { // non-wildcard pattern match
+				context.tree = (*current)[key]
+				context.Next()
 			}
+			return
+		}
+		current = &(*current)[key].children
+		if nil != (*current)[wildcard] {
+			wild = (*current)[wildcard] // there's a more proximate wildcard
+			context.param(asterisk,
+				strings.Join(components[index:], empty), capacity)
 		}
 	}
 }
