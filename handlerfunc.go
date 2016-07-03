@@ -82,9 +82,7 @@ func handlerizeLax(
 	unreachable := false
 	for _, function := range functions {
 		if unreachable {
-			err := fmt.Errorf(
-				"bear: %s %s has unreachable middleware",
-				verb, pattern)
+			err := fmt.Errorf("bear: %s %s has unreachable middleware", verb, pattern)
 			return nil, err
 		}
 		if handler, followable, err := handlerize(function); err != nil {
@@ -99,7 +97,8 @@ func handlerizeLax(
 	return handlers, nil
 }
 
-func handlerizeStrict(functions []interface{}) (handlers []HandlerFunc, err error) {
+func handlerizeStrict(functions []interface{}) ([]HandlerFunc, error) {
+	var handlers []HandlerFunc
 	for _, function := range functions {
 		switch function.(type) {
 		case HandlerFunc:

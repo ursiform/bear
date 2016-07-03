@@ -190,6 +190,7 @@ func TestBadHandler(t *testing.T) {
 		t.Errorf("handlerBad should not be accepted")
 	}
 }
+
 func TestBadVerbOn(t *testing.T) {
 	mux := New()
 	verb := "BLUB"
@@ -198,6 +199,7 @@ func TestBadVerbOn(t *testing.T) {
 		t.Errorf("%s should not be accepted", verb)
 	}
 }
+
 func TestBadVerbServe(t *testing.T) {
 	var (
 		method  = "BLUB"
@@ -217,6 +219,7 @@ func TestBadVerbServe(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
+
 func TestDuplicateFailure(t *testing.T) {
 	var (
 		handler HandlerFunc
@@ -235,6 +238,7 @@ func TestDuplicateFailure(t *testing.T) {
 		}
 	}
 }
+
 func TestDuplicateFailureRoot(t *testing.T) {
 	var (
 		handler HandlerFunc
@@ -253,6 +257,7 @@ func TestDuplicateFailureRoot(t *testing.T) {
 		}
 	}
 }
+
 func TestMiddleware(t *testing.T) {
 	var (
 		middlewares int  = 4
@@ -328,6 +333,7 @@ func TestMiddleware(t *testing.T) {
 		run(verb)
 	}
 }
+
 func TestMiddlewareRejectionA(t *testing.T) {
 	mux := New()
 	one := func(http.ResponseWriter, *http.Request, *Context) {}
@@ -337,6 +343,7 @@ func TestMiddlewareRejectionA(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
+
 func TestMiddlewareRejectionB(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
@@ -348,6 +355,7 @@ func TestMiddlewareRejectionB(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
+
 func TestMiddlewareRejectionC(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
@@ -356,6 +364,7 @@ func TestMiddlewareRejectionC(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
+
 func TestMiddlewareRejectionD(t *testing.T) {
 	mux := New()
 	one := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})
@@ -364,6 +373,7 @@ func TestMiddlewareRejectionD(t *testing.T) {
 		t.Errorf("middleware with wrong signature was accepted")
 	}
 }
+
 func TestMiddlewareRejectionE(t *testing.T) {
 	mux := New()
 	var (
@@ -389,6 +399,7 @@ func TestMiddlewareRejectionE(t *testing.T) {
 		t.Errorf("nil middleware was accepted")
 	}
 }
+
 func TestNoHandlers(t *testing.T) {
 	var (
 		mux  *Mux   = New()
@@ -406,6 +417,7 @@ func TestNoHandlers(t *testing.T) {
 		}
 	}
 }
+
 func TestNotFoundCustom(t *testing.T) {
 	var (
 		method       string = "GET"
@@ -448,6 +460,7 @@ func TestNotFoundCustom(t *testing.T) {
 			method, pathLost, patternLost, res.Code, wantLost)
 	}
 }
+
 func TestNotFoundNoParams(t *testing.T) {
 	var (
 		path    = "/foo/bar"
@@ -472,6 +485,7 @@ func TestNotFoundNoParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestNotFoundParams(t *testing.T) {
 	var (
 		path    = "/foo/BAR/baz"
@@ -496,6 +510,7 @@ func TestNotFoundParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestNotFoundRoot(t *testing.T) {
 	var (
 		method string = "GET"
@@ -512,6 +527,7 @@ func TestNotFoundRoot(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
+
 func TestNotFoundWildA(t *testing.T) {
 	var (
 		path    = "/foo"
@@ -536,6 +552,7 @@ func TestNotFoundWildA(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestNotFoundWildB(t *testing.T) {
 	var (
 		method     string = "GET"
@@ -557,6 +574,7 @@ func TestNotFoundWildB(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
+
 func TestOKMultiRuleParams(t *testing.T) {
 	var (
 		method     string = "GET"
@@ -578,6 +596,7 @@ func TestOKMultiRuleParams(t *testing.T) {
 		t.Errorf("%s %s got %d want %d", method, path, res.Code, want)
 	}
 }
+
 func TestOKNoParams(t *testing.T) {
 	var (
 		path    = "/foo/bar"
@@ -599,6 +618,7 @@ func TestOKNoParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestOKParams(t *testing.T) {
 	var (
 		path    = "/foo/BAR/baz/QUX"
@@ -621,6 +641,7 @@ func TestOKParams(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestOKParamsTrailingSlash(t *testing.T) {
 	var (
 		path    = "/foo/BAR/baz/QUX/"
@@ -643,6 +664,7 @@ func TestOKParamsTrailingSlash(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestOKRoot(t *testing.T) {
 	var (
 		path    = "/"
@@ -664,6 +686,7 @@ func TestOKRoot(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestOKWildRoot(t *testing.T) {
 	var (
 		path    = "/"
@@ -685,6 +708,7 @@ func TestOKWildRoot(t *testing.T) {
 			verb, path, pattern, want)(t)
 	}
 }
+
 func TestSanitizePatternPrefixSuffix(t *testing.T) {
 	var (
 		method         = "GET"
@@ -707,6 +731,7 @@ func TestSanitizePatternPrefixSuffix(t *testing.T) {
 		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
 	}
 }
+
 func TestSanitizePatternDoubleSlash(t *testing.T) {
 	var (
 		method         = "GET"
@@ -729,6 +754,7 @@ func TestSanitizePatternDoubleSlash(t *testing.T) {
 		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
 	}
 }
+
 func TestUnreachableA(t *testing.T) {
 	mux := New()
 	one := func(http.ResponseWriter, *http.Request, *Context) {}
@@ -739,6 +765,7 @@ func TestUnreachableA(t *testing.T) {
 		t.Errorf("unreachable A")
 	}
 }
+
 func TestUnreachableB(t *testing.T) {
 	mux := New()
 	one := func(http.ResponseWriter, *http.Request, *Context) {}
@@ -749,6 +776,7 @@ func TestUnreachableB(t *testing.T) {
 		t.Errorf("unreachable B")
 	}
 }
+
 func TestWildcardCompeting(t *testing.T) {
 	var (
 		method       string = "GET"
@@ -797,6 +825,7 @@ func TestWildcardCompeting(t *testing.T) {
 			method, pathThree, patternThree, body, wantThree)
 	}
 }
+
 func TestWildcardMethod(t *testing.T) {
 	var (
 		mux     = New()
@@ -821,6 +850,7 @@ func TestWildcardMethod(t *testing.T) {
 		}
 	}
 }
+
 func TestWildcardMethodWarning(t *testing.T) {
 	var (
 		mux            = New()
@@ -835,6 +865,7 @@ func TestWildcardMethodWarning(t *testing.T) {
 		t.Errorf("* %s should have registered, but with an error", pattern)
 	}
 }
+
 func TestWildcardNotLast(t *testing.T) {
 	var (
 		mux     = New()
@@ -848,6 +879,7 @@ func TestWildcardNotLast(t *testing.T) {
 			pattern)
 	}
 }
+
 func TestWildcardParams(t *testing.T) {
 	var (
 		method         = "GET"
@@ -870,6 +902,7 @@ func TestWildcardParams(t *testing.T) {
 		t.Errorf("%s %s (%s) got %s want %s", method, path, pattern, body, want)
 	}
 }
+
 func TestAlways(t *testing.T) {
 	var (
 		mux      *Mux = New()
@@ -934,6 +967,7 @@ func TestAlwaysBeforeNotFound(t *testing.T) {
 	res = httptest.NewRecorder()
 	mux.ServeHTTP(res, req)
 }
+
 func TestAlwaysRejection(t *testing.T) {
 	var (
 		mux   *Mux = New()
@@ -943,15 +977,15 @@ func TestAlwaysRejection(t *testing.T) {
 		four  func(http.ResponseWriter, *http.Request, *Context)
 	)
 	if err := mux.Always(one); err == nil {
-		t.Errorf("Always requires non-nil HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil handler")
 	}
 	if err := mux.Always(two); err == nil {
-		t.Errorf("Always requires non-nil HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil handler")
 	}
 	if err := mux.Always(three); err == nil {
-		t.Errorf("Always requires non-nil HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil handler")
 	}
 	if err := mux.Always(four); err == nil {
-		t.Errorf("Always requires non-nil HandlerFunc or its signature")
+		t.Errorf("Always requires non-nil handler")
 	}
 }

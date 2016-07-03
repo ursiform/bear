@@ -249,12 +249,8 @@ func (mux *Mux) tree(name string) (*tree, *bool) {
 // New returns a pointer to a Mux instance
 func New() *Mux {
 	mux := new(Mux)
-	mux.trees = [8]*tree{
-		{}, {}, {}, {},
-		{}, {}, {}, {}}
-	mux.wild = [8]bool{
-		false, false, false, false,
-		false, false, false, false}
+	mux.trees = [8]*tree{{}, {}, {}, {}, {}, {}, {}, {}}
+	mux.wild = [8]bool{false, false, false, false, false, false, false, false}
 	return mux
 
 }

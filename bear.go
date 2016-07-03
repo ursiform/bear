@@ -22,5 +22,13 @@ var (
 	dyn   = regexp.MustCompile(`\{(\w+)\}`)
 	dbl   = regexp.MustCompile(`[\/]{2,}`)
 	verbs = [8]string{
-		"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "POST", "PUT", "TRACE"}
+		"CONNECT",
+		"DELETE",
+		"GET",
+		"HEAD",
+		"OPTIONS",
+		"POST",
+		"PUT",
+		"TRACE",
+	}
 )
