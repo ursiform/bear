@@ -128,11 +128,23 @@ func (mux *Mux) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	// root is a special case because it is the top node in the tree
 	if req.URL.Path == slash || req.URL.Path == empty {
 		if nil != tr.handlers { // root match
-			(&Context{handler: -1, mux: mux, tree: tr}).Next()
+			(&Context{
+				handler:        -1,
+				mux:            mux,
+				tree:           tr,
+				ResponseWriter: res,
+				Request:        req,
+			}).Next()
 			return
 		} else if wild := tr.children[wildcard]; nil != wild {
 			// root level wildcard pattern match
-			(&Context{handler: -1, mux: mux, tree: wild}).Next()
+			(&Context{
+				handler:        -1,
+				mux:            mux,
+				tree:           wild,
+				ResponseWriter: res,
+				Request:        req,
+			}).Next()
 			return
 		}
 		http.NotFound(res, req)
